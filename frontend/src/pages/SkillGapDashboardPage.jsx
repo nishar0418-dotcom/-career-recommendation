@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { skillGapService } from '../services/api';
+import { skillGapService, studentService } from '../services/api';
+import RoadmapCard from '../components/RoadmapCard';
 import { 
   AlertCircle, 
   CheckCircle2, 
@@ -12,7 +13,9 @@ import {
   FolderGit2, 
   Check, 
   ExternalLink,
-  Target
+  Target,
+  Trophy,
+  RotateCcw
 } from 'lucide-react';
 
 const SkillGapDashboardPage = () => {
@@ -20,6 +23,19 @@ const SkillGapDashboardPage = () => {
   const [data, setData] = useState(null);
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [savingSkillName, setSavingSkillName] = useState(null);
+  const [addedSkillsMap, setAddedSkillsMap] = useState({});
+  const [notification, setNotification] = useState('');
+
+  // Persisted completed roadmap steps in localStorage
+  const [completedSteps, setCompletedSteps] = useState(() => {
+    try {
+      const saved = localStorage.getItem('careermatch_roadmap_completed_steps');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
   useEffect(() => {
     fetchSkillGaps();
@@ -35,6 +51,56 @@ const SkillGapDashboardPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleStep = (stepId) => {
+    setCompletedSteps(prev => {
+      const isNowCompleted = !prev[stepId];
+      const updated = { ...prev, [stepId]: isNowCompleted };
+      try {
+        localStorage.setItem('careermatch_roadmap_completed_steps', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      if (isNowCompleted) {
+        showTemporaryNotification('Step marked as completed! Keep going! 🚀');
+      }
+      return updated;
+    });
+  };
+
+  const handleAddSkillToProfile = async (skillName) => {
+    setSavingSkillName(skillName);
+    try {
+      await studentService.addSkill({
+        skill_name: skillName,
+        proficiency: 'Intermediate'
+      });
+      setAddedSkillsMap(prev => ({ ...prev, [skillName.toLowerCase()]: true }));
+      showTemporaryNotification(`✓ Successfully added ${skillName} to your profile skills!`);
+      // Refresh the skill gap analysis so the matrix updates
+      await fetchSkillGaps();
+    } catch (err) {
+      console.error(err);
+      showTemporaryNotification(`Could not add ${skillName}. Please try again.`);
+    } finally {
+      setSavingSkillName(null);
+    }
+  };
+
+  const handleResetProgress = () => {
+    if (window.confirm('Reset all roadmap step progress?')) {
+      setCompletedSteps({});
+      localStorage.removeItem('careermatch_roadmap_completed_steps');
+      showTemporaryNotification('All roadmap steps reset.');
+    }
+  };
+
+  const showTemporaryNotification = (msg) => {
+    setNotification(msg);
+    setTimeout(() => {
+      setNotification('');
+    }, 3500);
   };
 
   if (loading) {
@@ -195,12 +261,23 @@ const SkillGapDashboardPage = () => {
                     </td>
                     <td>
                       {item.status === 'Missing' ? (
-                        <a
-                          href={`#roadmap-${item.skill.toLowerCase().replace(/\s+/g, '-')}`}
-                          style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--primary-600)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          View Roadmap ↓
-                        </a>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <a
+                            href={`#roadmap-${item.skill.toLowerCase().replace(/\s+/g, '-')}`}
+                            style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--primary-600)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            View Roadmap ↓
+                          </a>
+                          {(() => {
+                            const pfx = item.skill.toLowerCase();
+                            const doneCount = Object.keys(completedSteps).filter(k => k.startsWith(pfx) && completedSteps[k]).length;
+                            return doneCount > 0 ? (
+                              <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '2px 7px' }}>
+                                {doneCount} Steps Done ✓
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                       ) : (
                         <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Skill Verified</span>
                       )}
@@ -214,85 +291,133 @@ const SkillGapDashboardPage = () => {
 
         {/* Section 2: Personalized Learning Roadmaps */}
         <div>
-          <div style={{ marginBottom: '24px' }}>
-            <span className="badge badge-primary" style={{ marginBottom: '8px' }}>Actionable Learning Paths</span>
-            <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>
-              Targeted Upskilling Roadmaps
-            </h2>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              Follow these recommended curriculum modules and practical capstone projects to acquire your missing competencies.
-            </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span className="badge badge-primary">Actionable Learning Paths</span>
+                <span className="badge badge-success">Interactive Steps</span>
+              </div>
+              <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                Targeted Upskilling Roadmaps
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem' }}>
+                Follow structured phase-by-phase roadmaps. Click on each step to mark it as completed as you finish your studies and projects.
+              </p>
+            </div>
+
+            {totalCompletedSteps > 0 && (
+              <button
+                onClick={handleResetProgress}
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                title="Reset all roadmap checkboxes"
+              >
+                <RotateCcw size={13} /> Reset Step Progress
+              </button>
+            )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {learning_recommendations.map((rec, idx) => {
-              const anchorId = `roadmap-${rec.skill.toLowerCase().replace(/\s+/g, '-')}`;
-
-              return (
-                <div key={idx} id={anchorId} className="card" style={{ padding: '28px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                        <span className="badge badge-danger">Missing Competency</span>
-                        <span className="badge badge-warning">{rec.importance} Priority</span>
-                      </div>
-                      <h3 style={{ fontSize: '1.4rem', color: 'var(--text-primary)' }}>
-                        Mastering {rec.skill}
-                      </h3>
-                    </div>
-
-                    <Link to="/profile" className="btn btn-outline btn-sm">
-                      + Mark as Learned in Profile
-                    </Link>
-                  </div>
-
-                  {/* Why Learn */}
-                  <div style={{ marginBottom: '20px', backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Why Learn This Skill?
-                    </div>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: '1.6' }}>
-                      {rec.why_learn}
-                    </p>
-                  </div>
-
-                  {/* Two Columns: Core Topics vs Recommended Project */}
-                  <div className="grid-2">
-                    {/* Core Topics */}
-                    <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                        <BookOpen size={16} color="var(--primary-600)" /> Core Topics & Concepts to Study
-                      </div>
-                      <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
-                        {rec.topics.map((t, tIdx) => (
-                          <li key={tIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: 'var(--text-secondary)' }}>
-                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: 'var(--primary-50)', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.75rem', fontWeight: '700', marginTop: '2px' }}>
-                              {tIdx + 1}
-                            </div>
-                            <span>{t}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Recommended Project */}
-                    <div style={{ padding: '18px', backgroundColor: 'var(--success-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--success-100)' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--success-700)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        <FolderGit2 size={16} /> Recommended Portfolio Project
-                      </div>
-                      <p style={{ color: '#064e3b', fontWeight: '600', fontSize: '0.95rem', marginBottom: '8px' }}>
-                        {rec.project}
-                      </p>
-                      <p style={{ color: '#047857', fontSize: '0.85rem', lineHeight: '1.5' }}>
-                        Building and deploying this project to GitHub will provide tangible proof of competence to potential interviewers.
-                      </p>
-                    </div>
-                  </div>
+          {/* Overall Roadmap Completion Status Banner */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            padding: '18px 24px',
+            marginBottom: '24px',
+            boxShadow: 'var(--shadow-xs)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                backgroundColor: totalCompletedSteps > 0 ? '#ecfdf5' : 'var(--primary-50)',
+                color: totalCompletedSteps > 0 ? '#059669' : 'var(--primary-600)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Trophy size={22} />
+              </div>
+              <div>
+                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '1rem' }}>
+                  Overall Roadmap Progress: {totalCompletedSteps} of {totalRoadmapSteps} Steps Completed
                 </div>
-              );
-            })}
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  {totalCompletedSteps === 0
+                    ? 'Start by clicking on the first step of any missing competency below to track your learning journey.'
+                    : `Great momentum! You have completed ${overallRoadmapPct}% of your missing competency steps.`}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ minWidth: '200px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: '700', marginBottom: '6px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Progress:</span>
+                <span style={{ color: 'var(--primary-600)' }}>{overallRoadmapPct}%</span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: '8px',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '999px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${overallRoadmapPct}%`,
+                  height: '100%',
+                  backgroundColor: overallRoadmapPct === 100 ? '#10b981' : 'var(--primary-600)',
+                  transition: 'width 0.4s ease',
+                  borderRadius: '999px'
+                }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Roadmap Cards List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {learning_recommendations.map((rec, idx) => (
+              <RoadmapCard
+                key={idx}
+                rec={rec}
+                completedStepKeys={completedSteps}
+                onToggleStep={handleToggleStep}
+                onAddSkillToProfile={handleAddSkillToProfile}
+                isAddedToProfile={!!addedSkillsMap[rec.skill.toLowerCase()]}
+                savingSkill={savingSkillName === rec.skill}
+              />
+            ))}
           </div>
         </div>
+
+        {/* Floating Toast Notification */}
+        {notification && (
+          <div style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            backgroundColor: '#0f172a',
+            color: '#ffffff',
+            padding: '12px 20px',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            zIndex: 1000,
+            fontSize: '0.9rem',
+            animation: 'fadeIn 0.2s ease-in-out'
+          }}>
+            <Sparkles size={16} color="#38bdf8" />
+            <span>{notification}</span>
+          </div>
+        )}
       </div>
     </div>
   );
