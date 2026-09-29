@@ -4,262 +4,230 @@
 ![Backend](https://img.shields.io/badge/Backend-Python%20Flask%20%7C%20REST%20API-success)
 ![Frontend](https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite-61dafb)
 ![AI/ML](https://img.shields.io/badge/AI%2FML-Scikit--Learn%20%7C%20TF--IDF%20%7C%20Cosine%20Similarity-orange)
-![Database](https://img.shields.io/badge/Database-MySQL%20%7C%20Zero--Config%20SQLite%20Fallback-blueviolet)
+![Database](https://img.shields.io/badge/Database-Normalized%20Relational%20Schema%20(MySQL%20%2F%20SQLite)-blueviolet)
+![Tests](https://img.shields.io/badge/Tests-10%2F10%20Benchmark%20Edge%20Cases%20Passing-brightgreen)
 
-An end-to-end intelligent full-stack career advisory, skill gap analysis, and internship recommendation system engineered with a clean, modern, professional white-background user interface (`#ffffff`).
+An end-to-end intelligent full-stack career advisory, skill gap analysis, and internship recommendation system engineered with a normalized relational schema, explainable AI recommendation engine, dynamic weight re-normalization for sparse profiles, and a modern, professional user interface.
 
 ---
 
 ## 📌 Table of Contents
-1. [Project Overview](#project-overview)
-2. [Key Features](#key-features)
-3. [System Architecture](#system-architecture)
-4. [AI Recommendation Algorithm & Mathematical Formulation](#ai-recommendation-algorithm--mathematical-formulation)
-5. [Database Design](#database-design)
-6. [Tech Stack](#tech-stack)
-7. [Installation & Setup Guide](#installation--setup-guide)
-8. [Demo Credentials](#demo-credentials)
-9. [REST API Documentation](#rest-api-documentation)
-10. [Application Screenshots & Pages](#application-screenshots--pages)
+1. [Project Overview](#-project-overview)
+2. [Normalized Relational Database Schema](#-normalized-relational-database-schema)
+3. [Structured Skill Taxonomy](#-structured-skill-taxonomy)
+4. [AI Recommendation Algorithm & Weighted Scoring](#-ai-recommendation-algorithm--weighted-scoring)
+5. [Sparse Profile Strategy: Dynamic Weight Re-Normalization](#-sparse-profile-strategy-dynamic-weight-re-normalization)
+6. [Recommendation API (`POST /api/recommendations`)](#-recommendation-api-post-apirecommendations)
+7. [Benchmark Test Suite & Results](#-benchmark-test-suite--results)
+8. [Documentation Links](#-documentation-links)
+9. [Installation & Setup Guide](#-installation--setup-guide)
+10. [Demo Credentials](#-demo-credentials)
 
 ---
 
 ## 🌟 Project Overview
 
-Traditional campus recruitment and career job boards rely on static keyword searching that frequently fails students:
+Traditional campus recruitment systems rely on static keyword lookups that fail students:
 * Keywords ignore the depth of practical academic projects and technical repositories.
-* Students receive generic rejection emails without understanding which specific skills disqualified them.
-* No actionable guidance or personalized syllabus is provided to bridge detected competency gaps.
+* Students receive generic rejections without understanding their specific competency gaps.
+* Sparse profiles (e.g. students with no projects) are unfairly penalized by arbitrary zero-point deductions.
 
-**CareerMatch AI** solves this problem by providing a closed-loop intelligence system:
-1. **Profile Synthesis**: Evaluates technical competencies, proficiency levels, academic projects, CGPA, certifications, and work preferences.
-2. **5-Factor Weighted Machine Learning**: Computes personalized compatibility scores for every active internship and tech opportunity.
-3. **TF-IDF Semantic Matching**: Uses natural language processing (`TfidfVectorizer` + Cosine Similarity) to analyze semantic alignment between project descriptions and employer expectations.
-4. **Skill Gap Matrix**: Isolates missing competencies, computes their market demand frequency, and delivers actionable learning roadmaps with core concepts and practical portfolio projects.
-5. **Interactive Analytics**: Features domain fit meters, career archetype suitability rankings, and a dedicated admin portal.
-
----
-
-## 🚀 Key Features
-
-* **Clean Modern White Background Aesthetic**: Strict adherence to `#ffffff` and `#f8fafc` surfaces, high-contrast typography (`Inter` & `Plus Jakarta Sans`), subtle shadows, and crisp blue/emerald accents.
-* **Explainable Match Scoring**: Transparency into why an opportunity was recommended with exact breakdown pills (Skills 50%, Interest 20%, Projects 10%, CGPA 10%, Work Mode 10%).
-* **Live AI Diagnostic Scanner**: Profile strength gauge (0–100%), strong areas identification, and optimization recommendations.
-* **Curated Upskilling Roadmaps**: Detailed topic-by-topic curriculum and recommended capstone projects for every missing skill.
-* **Career Archetype Explorer**: Benchmarking against standard industry roles (Data Analyst, Python Developer, ML Engineer, Full Stack, Cyber Security Analyst, Cloud Engineer).
-* **Search & Multidimensional Filters**: Filter by domain, work mode (Remote/Hybrid/On-site), opportunity type (Internship/Job), and minimum match score slider.
-* **Administrator Portal**: Real-time platform metrics, student talent monitoring, and opportunity CRUD management.
-* **Dual Database Architecture**: Zero-config automatic SQLite fallback for instant evaluation, 100% compliant with MySQL (`schema.sql` and `sample_data.sql`).
+**CareerMatch AI** provides a closed-loop intelligence system:
+1. **Normalized Relational Architecture**: 8 normalized tables with foreign keys, unique constraints, and indexes.
+2. **5-Factor Explainable Recommendation Algorithm**: Skill Match (50%), Interest Match (20%), Qualification Match (10%), Project Relevance (10%), and Preference Match (10%).
+3. **Dynamic Weight Re-Normalization**: Fair evaluation of sparse student profiles without punitive deductions for missing project portfolios.
+4. **Actionable Skill Gap Analysis**: Identifies exact missing required skills, computes market demand, and presents targeted learning roadmaps.
 
 ---
 
-## 🏛 System Architecture
+## 🗄 Normalized Relational Database Schema
 
-```
-+-----------------------------------------------------------------------------------+
-|                                 REACT FRONTEND                                    |
-|             (React 18 + Vite + Pure CSS Modern Design System + Axios)             |
-+-----------------------------------------------------------------------------------+
-|  • Landing Page (Hero, 4-Stage Infographic, Problem vs Solution, Features)        |
-|  • Auth (Register, Login, JWT storage, 1-Click Demo Pre-fill)                     |
-|  • Student Profile Page (Categorized library, custom tags, projects, certs)       |
-|  • AI Diagnostic Page (Live analyzer, strength gauge, domain suitability)        |
-|  • Student Dashboard (Overview metrics, domain fit meter, quick matches)         |
-|  • Recommendations Hub (Ranked matches, breakdown %, matching vs missing tags)    |
-|  • Skill Gap Matrix (Searchable table + actionable curriculum roadmaps)           |
-|  • Career Archetypes (Benchmarked industry roles & suitability scoring)           |
-|  • Opportunity Search & Filters (Keyword, domain, work mode, min match %)        |
-|  • Opportunity Details Modal (Full requirements & Direct Apply action)            |
-|  • Admin Dashboard (Stats, student tracking, opportunity CRUD)                    |
-+-----------------------------------------------------------------------------------+
-                                         │ REST API (JSON / Bearer JWT)
-                                         ▼
-+-----------------------------------------------------------------------------------+
-|                                 PYTHON FLASK BACKEND                              |
-+-----------------------------------------------------------------------------------+
-|  • routes/auth.py            -> /api/register, /api/login, /api/me                |
-|  • routes/student.py         -> /api/student/profile, /api/student/skills         |
-|  • routes/ai.py              -> /api/analyze-profile, /api/domain-scores          |
-|  • routes/recommendations.py -> /api/recommendations, /api/career-roles          |
-|  • routes/skill_gap.py       -> /api/skill-gaps                                   |
-|  • routes/opportunities.py   -> /api/opportunities (CRUD & filters)               |
-|  • routes/admin.py           -> /api/admin/stats, /api/admin/students             |
-+-----------------------------------------------------------------------------------+
-                                         │
-                    ┌────────────────────┴────────────────────┐
-                    ▼                                         ▼
-+------------------------------------+      +------------------------------------+
-|       AI RECOMMENDATION ENGINE     |      |          DATABASE LAYER            |
-|  (Scikit-Learn + TF-IDF + Pandas)  |      |   (MySQL + Auto SQLite Fallback)   |
-+------------------------------------+      +------------------------------------+
-| • Skill Match (50% weight)         |      | • users (students & admin)         |
-| • Interest Alignment (20% weight)  |      | • student_profiles                 |
-| • Qualification / CGPA (10% weight)|      | • skills & student_skills          |
-| • Projects TF-IDF Cosine Sim (10%) |      | • projects & certifications        |
-| • Work Mode & Preferences (10%)    |      | • opportunities (jobs/internships) |
-| • Skill Gap Frequency Identifier   |      | • recommendations log              |
-| • Curated Learning Curriculum      |      |                                    |
-+------------------------------------+      +------------------------------------+
+The database schema is fully defined in [`database/schema.sql`](database/schema.sql) and seeded with 57+ skills and 22+ opportunities in [`database/sample_data.sql`](database/sample_data.sql).
+
+### Relational Tables Overview
+1. **`students`**: Primary student identity, academic credentials (CGPA, department, year), and career preferences.
+2. **`skills`**: Standardized skill master taxonomy categorized across 9 domains.
+3. **`student_skills`**: Normalized many-to-many relationship linking `students` to `skills` with proficiency levels.
+4. **`opportunities`**: Internship and job postings with domain, location, work mode, and CGPA requirements.
+5. **`opportunity_skills`**: Normalized many-to-many mapping connecting `opportunities` to `skills` with `is_required` flags and `importance_weight`.
+6. **`projects`**: Student portfolio projects capturing real-world technical implementations and tech stacks.
+7. **`certifications`**: Professional certifications earned by students.
+8. **`recommendations`**: Audit and caching table persisting calculated component scores, final scores, matching skills, and skill gaps.
+
+```sql
+-- Recreate the database from scratch:
+sqlite3 career_match.db < database/schema.sql
+sqlite3 career_match.db < database/sample_data.sql
 ```
 
 ---
 
-## 🧮 AI Recommendation Algorithm & Mathematical Formulation
+## 🏷 Structured Skill Taxonomy
 
-The matching engine computes a holistic, multi-factor compatibility percentage $S_{\text{total}}$ for every opportunity:
+Skills are organized into 9 standardized categories:
 
-$$S_{\text{total}} = (S_{\text{skill}} \times 0.50) + (S_{\text{interest}} \times 0.20) + (S_{\text{qual}} \times 0.10) + (S_{\text{project}} \times 0.10) + (S_{\text{pref}} \times 0.10)$$
-
-### 1. Skill Match Score ($S_{\text{skill}}$ — 50% Weight)
-Compares student skills $K_{\text{student}}$ against required opportunity skills $K_{\text{required}}$ with case-insensitive normalization:
-$$S_{\text{skill}} = \frac{|K_{\text{student}} \cap K_{\text{required}}|}{|K_{\text{required}}|} \times 100$$
-
-### 2. Interest Alignment ($S_{\text{interest}}$ — 20% Weight)
-Evaluates domain keyword overlap and cluster proximity between student preferences and the opportunity domain:
-* Direct domain match: $100\%$
-* Title match: $90\%$
-* Related cluster affinity: $80\%$
-* Unrelated domain: $30\%$
-
-### 3. Qualification & CGPA Match ($S_{\text{qual}}$ — 10% Weight)
-Compares student's cumulative grade point average against the vacancy's minimum cutoff:
-$$S_{\text{qual}} = \begin{cases} 100\% & \text{if } \text{CGPA} \ge \text{Min CGPA} \\ 80\% & \text{if } \text{Min CGPA} - \text{CGPA} \le 0.5 \\ 50\% & \text{if } \text{Min CGPA} - \text{CGPA} \le 1.0 \\ 20\% & \text{otherwise} \end{cases}$$
-
-### 4. Project TF-IDF Cosine Similarity ($S_{\text{project}}$ — 10% Weight)
-Uses Scikit-Learn's `TfidfVectorizer` to extract feature term vectors from student project portfolios and opportunity job descriptions:
-$$\text{Cosine Similarity} = \frac{\mathbf{v}_{\text{student}} \cdot \mathbf{v}_{\text{job}}}{\|\mathbf{v}_{\text{student}}\| \|\mathbf{v}_{\text{job}}\|}$$
-$$S_{\text{project}} = \min\left(100, \max\left(20, 30.0 + (\text{Cosine Similarity} \times 100)\right)\right)$$
-
-### 5. Preference & Work Mode Match ($S_{\text{pref}}$ — 10% Weight)
-Evaluates alignment on opportunity type (Internship vs Job) and work mode (Remote, Hybrid, On-site):
-* Opportunity type match: up to $50$ points
-* Work mode match: up to $50$ points
+* **Programming**: Python, Java, C++, C#, JavaScript, TypeScript, Go, Rust
+* **Data Science**: Pandas, NumPy, Data Analysis, Statistics, Power BI, Tableau, Excel
+* **AI / Machine Learning**: Scikit-learn, TensorFlow, PyTorch, Machine Learning, Deep Learning, Natural Language Processing, Computer Vision
+* **Web Development**: React, Node.js, Express.js, HTML5, CSS3, FastAPI, Flask, Django, Next.js
+* **Database**: SQL, MySQL, PostgreSQL, MongoDB, Redis
+* **Cloud**: AWS, Microsoft Azure, Google Cloud Platform, Docker, Kubernetes
+* **Cyber Security**: Network Security, Ethical Hacking, Cryptography, Penetration Testing
+* **Tools**: Git, GitHub, VS Code, Postman, Jira
+* **Soft Skills**: Problem Solving, Communication, Teamwork
 
 ---
 
-## 🗄 Database Design
+## 🧠 AI Recommendation Algorithm & Weighted Scoring
 
-The database schema is structured into 8 relational tables:
+Recommendations are generated using an explainable, 5-factor multi-criteria weighted scoring algorithm:
 
-1. **`users`**: Authentication credentials, roles (`student`, `admin`), name, department, year of study.
-2. **`student_profiles`**: CGPA, interests, preferred domain, location, opportunity type, and work mode.
-3. **`skills`**: Master taxonomy of industry skills categorized by technical domain.
-4. **`student_skills`**: Student-associated skills with proficiency ratings (Beginner, Intermediate, Advanced).
-5. **`projects`**: Student project titles, problem descriptions, and technology stacks (used for TF-IDF).
-6. **`certifications`**: Student credentials and issuing organizations.
-7. **`opportunities`**: Vacancies with company, title, domain, description, required & preferred skills, CGPA cutoff, work mode, stipend/salary, and application link.
-8. **`recommendations`**: Historical audit log of calculated matches, matching skills, and missing skills.
+$$\text{Final Score} = (0.50 \times \text{Skill}) + (0.20 \times \text{Interest}) + (0.10 \times \text{Qualification}) + (0.10 \times \text{Project}) + (0.10 \times \text{Preference})$$
 
----
-
-## 💻 Tech Stack
-
-| Layer | Technologies |
-| :--- | :--- |
-| **Frontend** | React 18, Vite, React Router Dom v6, Axios, Lucide React, Google Fonts (Inter & Plus Jakarta Sans) |
-| **Styling** | Vanilla CSS3 Modern Design System, Pure White Theme (`#ffffff`), Responsive Grid & Flexbox |
-| **Backend** | Python 3.10+, Flask, Flask-CORS, PyJWT, Werkzeug Security |
-| **Machine Learning** | Scikit-Learn (`TfidfVectorizer`, `cosine_similarity`), Pandas, NumPy |
-| **Database** | MySQL (production), SQLite (zero-config local fallback via PyMySQL) |
+### Score Components
+* **Skill Match (50%)**: Direct and alias comparison between student skills and opportunity required skills from `opportunity_skills`, calibrated by student proficiency and relevant certifications.
+* **Interest Match (20%)**: Semantic alignment between student domain interests and opportunity domain/title (exact domain: 100%, title: 95%, cluster: 85%, unselected: 50% neutral baseline).
+* **Qualification Match (10%)**: Evaluates student CGPA against minimum cutoff (meets cutoff: 100%, within 0.5: 75%, within 1.0: 45%).
+* **Project Relevance (10%)**: Technology overlap and TF-IDF Cosine Similarity between student project descriptions and employer job descriptions.
+* **Preference Match (10%)**: Location alignment (50 pts), Opportunity Type alignment (30 pts), and Work Mode alignment (20 pts).
 
 ---
 
-## ⚙️ Installation & Setup Guide
+## ⚖ Sparse Profile Strategy: Dynamic Weight Re-Normalization
 
-### Prerequisites
-* **Python 3.10+**
-* **Node.js 18+ & npm**
-* *(Optional)* MySQL Server (if running local MySQL; otherwise, SQLite auto-fallback initializes automatically)
+To prevent early-stage university students without project portfolios from being unfairly penalized:
+* If a student provides no projects (`projects: []`), assigning 0/100 would artificially strip 10% from their score.
+* **Dynamic Proportional Weight Re-normalization** removes the project dimension and scales the remaining demonstrated criteria over the active 90% weight:
+
+$$\text{Final Score (Sparse)} = \frac{0.50 \times \text{Skill} + 0.20 \times \text{Interest} + 0.10 \times \text{Qualification} + 0.10 \times \text{Preference}}{0.90}$$
+
+* **Unstated Interests**: Handled using a documented neutral baseline of **50.0%** rather than a punitive 0%.
+* **Unstated Locations/Modes**: Default to open/flexible full eligibility (**100.0%**).
 
 ---
 
-### 1. Backend Setup
+## 📡 Recommendation API (`POST /api/recommendations`)
 
+### Request Example
 ```bash
-# Navigate to backend directory
+curl -X POST http://localhost:5000/api/recommendations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "student_id": 101,
+    "skills": [
+      {"name": "Python", "proficiency": "intermediate"},
+      {"name": "SQL", "proficiency": "beginner"},
+      {"name": "Pandas", "proficiency": "beginner"}
+    ],
+    "interests": ["Data Science", "Data Analytics"],
+    "cgpa": 8.5,
+    "department": "CSE",
+    "year": 2,
+    "projects": [
+      {
+        "name": "Student Performance Analysis",
+        "technologies": ["Python", "Pandas", "SQL"]
+      }
+    ],
+    "certifications": ["Python for Data Science"],
+    "preferred_location": "Coimbatore",
+    "opportunity_type": "Internship"
+  }'
+```
+
+### Response Example
+```json
+{
+  "student_id": 101,
+  "count": 22,
+  "recommendations": [
+    {
+      "opportunity_id": 201,
+      "title": "Data Analyst Intern",
+      "company": "ABC Technologies",
+      "final_score": 84.8,
+      "matching_skills": ["Python", "SQL", "Pandas"],
+      "missing_skills": ["Power BI"],
+      "skill_gap_count": 1,
+      "explanation": "Strong skill and interest match with a minor Power BI skill gap.",
+      "score_breakdown": {
+        "skill_match": 77.0,
+        "interest_match": 100.0,
+        "qualification_match": 100.0,
+        "project_match": 63.2,
+        "preference_match": 100.0,
+        "final_score": 84.8
+      }
+    }
+  ]
+}
+```
+
+---
+
+## 📊 Benchmark Test Suite & Results
+
+The automated benchmark suite in [`tests/test_recommendation_engine.py`](tests/test_recommendation_engine.py) evaluates 10 edge cases against Opportunity 201:
+
+| Case | Skills | Projects | Interests | Expected Behaviour | Actual Score | Result |
+| :--- | :--- | :--- | :--- | :--- | ---: | :---: |
+| **Case 1: Complete Profile** | Many (3) | Yes (1) | Yes | Normal 5-factor scoring | **86.2** | `PASS` |
+| **Case 2: No Projects** | Many (3) | No | Yes | Dynamic re-normalization (no penalty) | **86.1** | `PASS` |
+| **Case 3: Only One Skill** | 1 | No | Yes | Low-confidence result, clear skill gaps | **58.3** | `PASS` |
+| **Case 4: No Skills** | 0 | No | No | Safe fallback, no misleading high score | **33.3** | `PASS` |
+| **Case 5: No Interests** | 3 | No | No | Neutral baseline (50% interest match) | **75.0** | `PASS` |
+| **Case 6: No Projects + No Certs** | 2 | No | Yes | Safe sparse execution, skill gaps shown | **72.2** | `PASS` |
+| **Case 7: Exact Skill Match** | Full (4) | Yes | Yes | High score | **99.4** | `PASS` |
+| **Case 8: Zero Skill Match** | Disjoint | Yes | No | Zero skill match, full skill gaps flagged | **28.0** | `PASS` |
+| **Case 9: CGPA Below Cutoff** | 3 | No | Yes | Proportional qualification penalty | **80.0** | `PASS` |
+| **Case 10: Location Mismatch** | 3 | No | Yes | Location preference reduction (15 vs 50) | **82.2** | `PASS` |
+
+### Benchmark Summary Statistics
+- **Passed**: 10 / 10 (100%)
+- **Average Score**: **70.1**
+- **Min Score**: **28.0** | **Max Score**: **99.4**
+- **Test Command**: `python tests/test_recommendation_engine.py`
+
+---
+
+## 📚 Documentation Links
+- [Recommendation API Specification](docs/recommendation-api.md)
+- [Recommendation Benchmark Report](docs/recommendation-benchmark.md)
+- [Sparse Profile Strategy & Proof](docs/sparse-profile-strategy.md)
+- [Implementation Evidence & DB Structures](docs/implementation-evidence.md)
+
+---
+
+## 💻 Installation & Setup Guide
+
+### 1. Clone Repository & Setup Backend
+```bash
 cd career-recommendation-system/backend
-
-# (Optional) Create and activate a virtual environment
 python -m venv venv
-# Windows:
 venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Start the Flask Backend Server (Port 5000)
 python app.py
 ```
 
-> **Note**: The backend automatically initializes all tables and seeds default users, skills, and 15+ industry opportunities upon initial startup!
-
----
-
-### 2. Frontend Setup
-
+### 2. Setup Frontend
 ```bash
-# In a separate terminal, navigate to frontend directory
 cd career-recommendation-system/frontend
-
-# Install node dependencies
 npm install
-
-# Start the Vite React Development Server (Port 5173)
 npm run dev
 ```
 
-Visit **`http://localhost:5173`** in your browser.
+### 3. Run Benchmark Tests
+```bash
+cd career-recommendation-system
+python tests/test_recommendation_engine.py
+```
 
 ---
 
 ## 🔑 Demo Credentials
 
-For instant testing and evaluation, pre-configured demo accounts are seeded with rich profile data:
-
-| Role | Email | Password | Pre-seeded Features |
-| :--- | :--- | :--- | :--- |
-| **Student** | `student@careermatch.ai` | `Student@123` | 8.45 CGPA, 9 skills, 2 ML/Dashboard projects, 2 Certifications |
-| **Admin** | `admin@careermatch.ai` | `Admin@123` | Platform analytics, student oversight, opportunity CRUD |
-
-> **Tip**: The login screen features 1-click **Student Demo** and **Admin Demo** pre-fill buttons for instant access.
-
----
-
-## 📡 REST API Documentation
-
-### Authentication (`/api`)
-* `POST /api/register` — Register a new student user
-* `POST /api/login` — Authenticate and receive JWT Bearer token
-* `GET /api/me` — Retrieve current authenticated user profile
-
-### Student Profile (`/api/student`)
-* `GET /api/student/profile` — Fetch complete student profile (skills, projects, certs, preferences)
-* `PUT /api/student/profile` — Update student profile, skills, projects, and preferences
-* `GET /api/student/skills` — Fetch categorized master skills library
-
-### AI & Diagnostics (`/api`)
-* `POST /api/analyze-profile` — Generate profile strength score, dominant domains, and suggestions
-* `GET /api/domain-scores` — Get domain suitability fit scores (Data Science, Web, Cloud, AI, Security)
-
-### Recommendations & Skill Gaps (`/api`)
-* `GET /api/recommendations` — Fetch personalized opportunities ranked by AI match percentage
-* `GET /api/recommendations/<id>` — Fetch detailed opportunity evaluation with score breakdown
-* `GET /api/career-roles` — Fetch industry career archetypes ranked by suitability
-* `GET /api/skill-gaps` — Retrieve skill gap matrix and curated learning roadmaps
-
-### Opportunities (`/api`)
-* `GET /api/opportunities` — Search and filter opportunities (keyword, domain, mode, type)
-* `POST /api/opportunities` — Create new opportunity (*Admin only*)
-* `PUT /api/opportunities/<id>` — Update existing opportunity (*Admin only*)
-* `DELETE /api/opportunities/<id>` — Delete opportunity (*Admin only*)
-
-### Admin Portal (`/api/admin`)
-* `GET /api/admin/stats` — Platform counts, domain distribution, and top skills
-* `GET /api/admin/students` — List registered students with profile completion metrics
-
----
-
-## 📄 License & Academic Attribution
-Developed as an advanced academic internship project for student career empowerment. Free to use and extend for educational purposes.
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Student** | `alex.johnson@example.com` | `password123` |
+| **Student (Seeded)** | `arun.kumar@example.com` | `password123` |
+| **Administrator** | `admin@careerpath.edu` | `admin123` |
