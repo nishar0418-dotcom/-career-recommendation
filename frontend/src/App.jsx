@@ -27,9 +27,10 @@ function App() {
           <main className="main-content">
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/home" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/register" element={<LoginPage />} />
               <Route path="/opportunities" element={<OpportunitySearchPage />} />
 
               {/* Student Authenticated Routes */}
@@ -72,6 +73,10 @@ function App() {
                     <SkillGapDashboardPage />
                   </ProtectedRoute>
                 }
+              />
+              <Route
+                path="/skill-gap"
+                element={<Navigate to="/skill-gaps" replace />}
               />
               <Route
                 path="/career-roles"

@@ -113,6 +113,11 @@ const SkillGapDashboardPage = () => {
 
   const { summary = {}, gaps_table = [], learning_recommendations = [] } = data || {};
 
+  // Overall roadmap metrics
+  const totalRoadmapSteps = learning_recommendations.reduce((acc, rec) => acc + (rec.topics?.length || 0) + 1, 0);
+  const totalCompletedSteps = Object.values(completedSteps).filter(Boolean).length;
+  const overallRoadmapPct = totalRoadmapSteps > 0 ? Math.round((totalCompletedSteps / totalRoadmapSteps) * 100) : 0;
+
   // Filter gaps table
   const filteredGaps = gaps_table.filter(item => {
     if (filterStatus !== 'All' && item.status !== filterStatus) {
