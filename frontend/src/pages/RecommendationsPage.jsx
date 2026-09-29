@@ -14,13 +14,21 @@ import {
   ChevronUp,
   RotateCcw,
   CheckCircle2,
-  Briefcase
+  Briefcase,
+  X
 } from 'lucide-react';
 
 const parseSkills = (val) => {
   if (!val) return [];
   if (Array.isArray(val)) return val;
   return String(val).split(/[,|/]+/).map(s => s.trim()).filter(Boolean);
+};
+
+const getMatchPercentage = (opp) => {
+  if (!opp) return 0;
+  const val = opp.final_score ?? opp.match_percentage ?? opp.score_breakdown?.final_score ?? 0;
+  const num = parseFloat(val);
+  return isNaN(num) ? 0 : Math.round(num * 10) / 10;
 };
 
 const RecommendationsPage = () => {
@@ -72,26 +80,27 @@ const RecommendationsPage = () => {
 
   const filteredRecommendations = recommendations.filter(opp => {
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = opp.title?.toLowerCase().includes(q);
-      const matchCompany = (opp.company || opp.company_name)?.toLowerCase().includes(q);
-      const matchSkills = opp.required_skills?.toLowerCase().includes(q);
+      const q = searchQuery.toLowerCase().trim();
+      const matchTitle = (opp.title || '').toLowerCase().includes(q);
+      const matchCompany = (opp.company || opp.company_name || '').toLowerCase().includes(q);
+      const matchSkills = (opp.required_skills || '').toLowerCase().includes(q);
       if (!matchTitle && !matchCompany && !matchSkills) return false;
     }
 
-    if (selectedDomain !== 'All' && !opp.domain?.toLowerCase().includes(selectedDomain.toLowerCase())) {
+    if (selectedDomain !== 'All' && !(opp.domain || '').toLowerCase().includes(selectedDomain.toLowerCase())) {
       return false;
     }
 
-    if (selectedWorkMode !== 'All' && !opp.work_mode?.toLowerCase().includes(selectedWorkMode.toLowerCase())) {
+    if (selectedWorkMode !== 'All' && !(opp.work_mode || '').toLowerCase().includes(selectedWorkMode.toLowerCase())) {
       return false;
     }
 
-    if (selectedType !== 'All' && !opp.opportunity_type?.toLowerCase().includes(selectedType.toLowerCase())) {
+    if (selectedType !== 'All' && !(opp.opportunity_type || '').toLowerCase().includes(selectedType.toLowerCase())) {
       return false;
     }
 
-    if (opp.match_percentage < minMatchPct) {
+    const score = getMatchPercentage(opp);
+    if (score < Number(minMatchPct)) {
       return false;
     }
 
@@ -163,7 +172,7 @@ const RecommendationsPage = () => {
 
         {/* Filter Toolbar Card */}
         <div className="card" style={{ padding: '16px 20px', marginBottom: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) repeat(4, minmax(130px, 1fr)) auto', gap: '10px', alignItems: 'center' }}>
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '13px' }} />
@@ -218,29 +227,119 @@ const RecommendationsPage = () => {
               <option value="Job">Full-time Job</option>
             </select>
 
+            {/* Min Match Dropdown */}
+            <select
+              className="form-select"
+              value={minMatchPct}
+              onChange={(e) => setMinMatchPct(Number(e.target.value))}
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: minMatchPct > 0 ? '700' : 'normal',
+                color: minMatchPct > 0 ? 'var(--primary-700)' : 'inherit',
+                borderColor: minMatchPct > 0 ? 'var(--primary-500)' : 'var(--border-subtle)',
+                backgroundColor: minMatchPct > 0 ? 'rgba(79, 70, 229, 0.05)' : 'var(--bg-primary)'
+              }}
+            >
+              <option value={0}>Min Match: Any</option>
+              <option value={50}>Min Match: 50%+</option>
+              <option value={60}>Min Match: 60%+</option>
+              <option value={65}>Min Match: 65%+</option>
+              <option value={70}>Min Match: 70%+</option>
+              <option value={75}>Min Match: 75%+</option>
+              <option value={80}>Min Match: 80%+</option>
+              <option value={85}>Min Match: 85%+</option>
+              <option value={90}>Min Match: 90%+</option>
+            </select>
+
             {/* Reset */}
-            <button onClick={resetFilters} className="btn btn-secondary btn-sm" title="Reset Filters">
+            <button onClick={resetFilters} className="btn btn-secondary btn-sm" title="Reset Filters" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <RotateCcw size={14} /> Reset
             </button>
           </div>
 
-          {/* Min Match Slider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <SlidersHorizontal size={13} /> Min Match: <strong>{minMatchPct}%</strong>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="90"
-              step="5"
-              value={minMatchPct}
-              onChange={(e) => setMinMatchPct(Number(e.target.value))}
-              style={{ width: '150px', accentColor: 'var(--primary-600)' }}
-            />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Showing {filteredRecommendations.length} of {recommendations.length}
-            </span>
+          {/* Min Match Controls & Quick Presets */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginTop: '14px',
+            paddingTop: '12px',
+            borderTop: '1px solid var(--border-subtle)'
+          }}>
+            {/* Slider & Display */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <SlidersHorizontal size={14} /> Min Match:
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="95"
+                step="5"
+                value={minMatchPct}
+                onInput={(e) => setMinMatchPct(Number(e.target.value))}
+                onChange={(e) => setMinMatchPct(Number(e.target.value))}
+                style={{ width: '160px', accentColor: 'var(--primary-600)', cursor: 'pointer' }}
+              />
+              <span style={{
+                display: 'inline-block',
+                minWidth: '44px',
+                textAlign: 'center',
+                padding: '2px 8px',
+                backgroundColor: minMatchPct > 0 ? 'var(--primary-50)' : 'var(--bg-secondary)',
+                color: minMatchPct > 0 ? 'var(--primary-700)' : 'var(--text-primary)',
+                border: minMatchPct > 0 ? '1px solid var(--primary-300)' : '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: '700',
+                fontSize: '0.82rem'
+              }}>
+                {minMatchPct}%
+              </span>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '600' }}>Presets:</span>
+              {[0, 50, 60, 65, 70, 75, 80].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setMinMatchPct(val)}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: minMatchPct === val ? '700' : '500',
+                    borderRadius: 'var(--radius-sm)',
+                    border: minMatchPct === val ? '1px solid var(--primary-600)' : '1px solid var(--border-subtle)',
+                    backgroundColor: minMatchPct === val ? 'var(--primary-600)' : 'var(--bg-primary)',
+                    color: minMatchPct === val ? '#ffffff' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {val === 0 ? 'All' : `${val}%+`}
+                </button>
+              ))}
+            </div>
+
+            {/* Count & Status */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {minMatchPct > 0 && (
+                <span
+                  onClick={() => setMinMatchPct(0)}
+                  className="badge badge-primary"
+                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem' }}
+                  title="Click to clear min match"
+                >
+                  ≥ {minMatchPct}% <X size={11} />
+                </span>
+              )}
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+                Showing <strong>{filteredRecommendations.length}</strong> of {recommendations.length}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -254,15 +353,19 @@ const RecommendationsPage = () => {
             <Briefcase size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px auto' }} />
             <h3 style={{ fontSize: '1.2rem', marginBottom: '6px' }}>No matches found</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>
-              Try lowering the min match filter or adding more skills in your profile.
+              {minMatchPct > 0
+                ? `No opportunities match your filter of ${minMatchPct}% or higher. Try lowering the minimum match percentage.`
+                : 'Try adjusting your search criteria or adding more skills in your profile.'}
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+              {minMatchPct > 0 && (
+                <button onClick={() => setMinMatchPct(0)} className="btn btn-primary btn-sm">
+                  Show All Matches (Reset Min Match)
+                </button>
+              )}
               <button onClick={resetFilters} className="btn btn-secondary btn-sm">
-                Reset Filters
+                Reset All Filters
               </button>
-              <Link to="/profile" className="btn btn-primary btn-sm">
-                Add Skills in Profile
-              </Link>
             </div>
           </div>
         ) : (
@@ -308,8 +411,8 @@ const RecommendationsPage = () => {
 
                     {/* Match Score Badge */}
                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                      <span className={`match-score-pill ${getMatchBadgeClass(opp.match_percentage)}`} style={{ fontSize: '0.98rem', padding: '6px 14px' }}>
-                        <Sparkles size={14} /> {opp.match_percentage}% Match
+                      <span className={`match-score-pill ${getMatchBadgeClass(getMatchPercentage(opp))}`} style={{ fontSize: '0.98rem', padding: '6px 14px' }}>
+                        <Sparkles size={14} /> {getMatchPercentage(opp)}% Match
                       </span>
                       <button
                         onClick={() => toggleBreakdown(opp.id)}
