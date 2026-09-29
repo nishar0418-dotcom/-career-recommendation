@@ -55,7 +55,7 @@ def get_admin_stats():
 def get_admin_students():
     sql = """
     SELECT 
-        u.id, u.name, u.email, u.department, u.year_of_study, u.created_at,
+        u.id, u.name, u.email, u.department, u.year, u.year as year_of_study, u.created_at,
         p.cgpa, p.preferred_domain, p.opportunity_type, p.work_mode,
         COUNT(DISTINCT s.id) as skills_count,
         COUNT(DISTINCT pr.id) as projects_count,
