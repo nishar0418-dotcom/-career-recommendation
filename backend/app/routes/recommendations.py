@@ -13,7 +13,7 @@ Endpoints:
 
 from flask import Blueprint, request, jsonify
 from app.database.connection import query_db, execute_db
-from app.utils.auth import token_required
+from app.utils.auth import token_required, decode_token
 from app.ai.recommendation_engine import (
     rank_opportunities,
     parse_skill_list
@@ -155,14 +155,8 @@ def _cache_recommendations(student_id: int, ranked_items: list):
         pass
 
 
-@recommendations_bp.route("/recommendations", methods=["POST"])
-def post_recommendations():
-    """
-    POST /api/recommendations
-    Computes explainable recommendations based on a structured student profile.
-    Accepts full student profile JSON and returns ranked opportunities with
-    matching skills, skill gaps, and component score breakdown.
-    """
+def _process_post_recommendations():
+    """Logic for evaluating POST /api/recommendations requests."""
     data = request.get_json(silent=True)
     if not data or not isinstance(data, dict):
         return jsonify({
@@ -243,14 +237,8 @@ def post_recommendations():
     }), 200
 
 
-@recommendations_bp.route("/recommendations", methods=["GET"])
-@token_required
-def get_recommendations():
-    """
-    GET /api/recommendations
-    Returns ranked opportunities for the logged-in student.
-    Maintains backward compatibility with the frontend dashboard and supports query filters.
-    """
+def _process_get_recommendations():
+    """Logic for evaluating GET /api/recommendations requests."""
     user = request.current_user
     u_id = user["id"]
 
@@ -294,6 +282,44 @@ def get_recommendations():
         "count": len(filtered_results),
         "student_skills": [s["name"] if isinstance(s, dict) else s for s in student_data["skills"]]
     }), 200
+
+
+@recommendations_bp.route("/recommendations", methods=["GET", "POST"])
+def recommendations():
+    """
+    Combined handler supporting both:
+      - POST /api/recommendations (Public / Structured student payload)
+      - GET  /api/recommendations (Authenticated student profile query)
+    """
+    if request.method == "POST":
+        return _process_post_recommendations()
+
+    # GET requires authentication
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        return jsonify({"error": "Authorization header missing"}), 401
+
+    parts = auth_header.split(" ")
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return jsonify({"error": "Invalid Authorization header format"}), 401
+
+    payload = decode_token(parts[1])
+    if not payload:
+        return jsonify({"error": "Token is invalid or expired"}), 401
+
+    user = query_db(
+        "SELECT id, name, email, department, year, role FROM users WHERE id = %s",
+        (payload["user_id"],),
+        one=True
+    )
+    if not user:
+        return jsonify({"error": "User account no longer exists"}), 401
+
+    user_dict = dict(user)
+    user_dict["year_of_study"] = user_dict.get("year", "")
+    request.current_user = user_dict
+
+    return _process_get_recommendations()
 
 
 @recommendations_bp.route("/recommendations/<int:opp_id>", methods=["GET"])

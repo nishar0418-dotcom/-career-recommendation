@@ -228,6 +228,7 @@ python tests/test_recommendation_engine.py
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Student** | `alex.johnson@example.com` | `password123` |
-| **Student (Seeded)** | `arun.kumar@example.com` | `password123` |
-| **Administrator** | `admin@careerpath.edu` | `admin123` |
+| **Student (Alex Johnson)** | `student@careermatch.ai` | `Student@123` |
+| **Student (Arun Kumar)** | `arun.kumar@example.com` | `password123` |
+| **Administrator** | `admin@careermatch.ai` | `Admin@123` |
+| **Student (Alternative)** | `alex.johnson@example.com` | `password123` |
