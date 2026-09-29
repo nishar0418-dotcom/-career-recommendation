@@ -93,10 +93,10 @@ const DashboardPage = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <span className="badge badge-primary">Student Dashboard</span>
-              <span className="badge badge-neutral">{user?.year_of_study || 'Student'}</span>
+              <span className="badge badge-neutral">{user?.year_of_study || user?.year || 'Student'}</span>
             </div>
             <h1 style={{ fontSize: '2.2rem', color: 'var(--text-primary)' }}>
-              Welcome back, {user?.name.split(' ')[0]} 👋
+              Welcome back, {user?.name ? user.name.split(' ')[0] : 'Student'} 👋
             </h1>
             <p style={{ color: 'var(--text-secondary)' }}>
               Here is an overview of your skill profile, AI match metrics, and recommended opportunities.

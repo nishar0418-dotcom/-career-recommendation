@@ -127,12 +127,12 @@ const CareerRolesPage = () => {
                     </div>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {r.matching_skills.map((s, sIdx) => (
+                      {(r.matching_skills || []).map((s, sIdx) => (
                         <span key={sIdx} className="skill-tag matched" style={{ fontSize: '0.82rem' }}>
                           ✓ {s}
                         </span>
                       ))}
-                      {r.missing_skills.map((s, sIdx) => (
+                      {(r.missing_skills || []).map((s, sIdx) => (
                         <span key={sIdx} className="skill-tag missing" style={{ fontSize: '0.82rem' }}>
                           ✗ {s}
                         </span>
@@ -154,7 +154,7 @@ const CareerRolesPage = () => {
                 {/* Footer Link */}
                 <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
-                    {r.matching_skills.length} of {r.required_skills.length} skills matched
+                    {(r.matching_skills || []).length} of {(r.required_skills || []).length} skills matched
                   </span>
                   <Link
                     to={`/recommendations?domain=${encodeURIComponent(r.domain)}`}

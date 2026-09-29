@@ -146,7 +146,7 @@ const RecommendationsPage = () => {
               {studentSkills.length > 0 ? (
                 studentSkills.map((sk, idx) => (
                   <span key={idx} className="skill-tag matched" style={{ fontSize: '0.8rem', padding: '2px 8px' }}>
-                    ✓ {sk}
+                    ✓ {typeof sk === 'object' ? (sk.skill_name || sk.name || '') : sk}
                   </span>
                 ))
               ) : (
@@ -359,7 +359,7 @@ const RecommendationsPage = () => {
                         <div>
                           <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Projects (10%)</div>
                           <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                            {scoreBreakdown.project_tfidf_match ?? 0}%
+                            {scoreBreakdown.project_match ?? scoreBreakdown.project_tfidf_match ?? 0}%
                           </div>
                         </div>
                         <div>
@@ -375,6 +375,21 @@ const RecommendationsPage = () => {
                           </div>
                         </div>
                       </div>
+
+                      {opp.explanation && (
+                        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed var(--border-subtle)', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                          <strong>Recommendation Rationale:</strong> {opp.explanation}
+                          {opp.explanation_details && opp.explanation_details.length > 0 && (
+                            <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                              {opp.explanation_details.map((detail, dIdx) => (
+                                <li key={dIdx} style={{ color: detail.startsWith('✓') ? 'var(--success-700)' : 'var(--danger-600)' }}>
+                                  {detail}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

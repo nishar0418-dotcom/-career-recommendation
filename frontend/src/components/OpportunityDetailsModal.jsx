@@ -21,16 +21,29 @@ const OpportunityDetailsModal = ({ opportunity, studentSkills = [], onClose }) =
   // Compute matching vs missing skills if not directly on the object
   const parseSkills = (raw) => {
     if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    return raw.split(/[,|/]+/).map(s => s.trim()).filter(Boolean);
+    if (Array.isArray(raw)) return raw.map(s => (typeof s === 'object' ? (s.skill_name || s.name || '') : String(s))).filter(Boolean);
+    return String(raw).split(/[,|/]+/).map(s => s.trim()).filter(Boolean);
   };
 
   const required = parseSkills(opportunity.required_skills);
   const preferred = parseSkills(opportunity.preferred_skills);
 
-  const studentSkillsNorm = studentSkills.map(s => s.toLowerCase().trim());
-  const matching = opportunity.matching_skills || required.filter(s => studentSkillsNorm.includes(s.toLowerCase()));
-  const missing = opportunity.missing_skills || required.filter(s => !studentSkillsNorm.includes(s.toLowerCase()));
+  const studentSkillsNorm = studentSkills.map(s => {
+    if (typeof s === 'string') return s.toLowerCase().trim();
+    if (s && typeof s === 'object') return (s.skill_name || s.name || '').toLowerCase().trim();
+    return String(s || '').toLowerCase().trim();
+  }).filter(Boolean);
+
+  const parsedMatching = parseSkills(opportunity.matching_skills);
+  const parsedMissing = parseSkills(opportunity.missing_skills);
+
+  const matching = parsedMatching.length > 0
+    ? parsedMatching
+    : required.filter(s => studentSkillsNorm.includes(s.toLowerCase()));
+
+  const missing = parsedMissing.length > 0
+    ? parsedMissing
+    : required.filter(s => !studentSkillsNorm.includes(s.toLowerCase()));
 
   const getMatchClass = (score) => {
     if (score >= 75) return 'match-high';
