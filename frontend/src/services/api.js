@@ -83,4 +83,11 @@ export const adminService = {
   getStudents: () => api.get('/admin/students'),
 };
 
+export const applicationService = {
+  apply: (data) => api.post('/applications', data),
+  getApplications: () => api.get('/applications'),
+  checkStatus: (oppId) => api.get(`/applications/check/${oppId}`),
+};
+
 export default api;
+

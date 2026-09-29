@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { opportunityService, studentService } from '../services/api';
+import { opportunityService, studentService, applicationService } from '../services/api';
 import OpportunityDetailsModal from '../components/OpportunityDetailsModal';
+import ApplyModal from '../components/ApplyModal';
 import { 
   Search, 
   Building2, 
@@ -9,14 +10,19 @@ import {
   Briefcase, 
   ExternalLink, 
   SlidersHorizontal,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2,
+  Send
 } from 'lucide-react';
 
 const OpportunitySearchPage = () => {
   const [loading, setLoading] = useState(true);
   const [opportunities, setOpportunities] = useState([]);
   const [studentSkills, setStudentSkills] = useState([]);
+  const [studentProfile, setStudentProfile] = useState(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
+  const [applyingOpportunity, setApplyingOpportunity] = useState(null);
+  const [appliedMap, setAppliedMap] = useState({});
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,28 +31,34 @@ const OpportunitySearchPage = () => {
   const [typeFilter, setTypeFilter] = useState('All');
 
   useEffect(() => {
-    fetchOpportunities();
-    fetchStudentSkills();
+    fetchInitialData();
   }, []);
 
-  const fetchOpportunities = async () => {
+  const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const res = await opportunityService.getOpportunities();
-      setOpportunities(res.data.opportunities || []);
+      const [oppRes, profRes, appRes] = await Promise.all([
+        opportunityService.getOpportunities(),
+        studentService.getProfile().catch(() => ({ data: {} })),
+        applicationService.getApplications().catch(() => ({ data: { applications: [] } }))
+      ]);
+      setOpportunities(oppRes.data.opportunities || []);
+      const profileData = profRes.data || {};
+      setStudentProfile(profileData);
+      setStudentSkills(profileData.skills || []);
+
+      const apps = appRes?.data?.applications || [];
+      const map = {};
+      apps.forEach(app => {
+        if (app.opportunity_id) {
+          map[app.opportunity_id] = true;
+        }
+      });
+      setAppliedMap(map);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchStudentSkills = async () => {
-    try {
-      const res = await studentService.getProfile();
-      setStudentSkills(res.data.skills || []);
-    } catch {
-      // User may not be logged in, ignore
     }
   };
 
@@ -232,15 +244,19 @@ const OpportunitySearchPage = () => {
                     View Details
                   </button>
 
-                  <a
-                    href={opp.application_link || 'https://linkedin.com'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-primary btn-sm"
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    Apply Now <ExternalLink size={14} />
-                  </a>
+                  {appliedMap[opp.id] ? (
+                    <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '0.82rem' }}>
+                      <CheckCircle2 size={14} /> Applied ✓
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setApplyingOpportunity(opp)}
+                      className="btn btn-primary btn-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      Apply to Company <Send size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -253,7 +269,24 @@ const OpportunitySearchPage = () => {
         <OpportunityDetailsModal
           opportunity={selectedOpportunity}
           studentSkills={studentSkills}
+          isApplied={!!appliedMap[selectedOpportunity?.id]}
+          onApply={(opp) => {
+            setSelectedOpportunity(null);
+            setApplyingOpportunity(opp);
+          }}
           onClose={() => setSelectedOpportunity(null)}
+        />
+      )}
+
+      {/* Direct Apply Modal */}
+      {applyingOpportunity && (
+        <ApplyModal
+          opportunity={applyingOpportunity}
+          studentProfile={studentProfile}
+          onClose={() => setApplyingOpportunity(null)}
+          onAppliedSuccess={(oppId) => {
+            setAppliedMap(prev => ({ ...prev, [oppId]: true }));
+          }}
         />
       )}
     </div>

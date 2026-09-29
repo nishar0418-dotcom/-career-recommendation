@@ -87,18 +87,20 @@ class UnifiedCursor:
             return None
         d = dict(row)
         # Compatibility aliases for opportunities and certifications
-        if "company_name" in d and "company" not in d:
-            d["company"] = d["company_name"]
-        elif "company" in d and "company_name" not in d:
-            d["company_name"] = d["company"]
-        if "application_url" in d and "application_link" not in d:
-            d["application_link"] = d["application_url"]
-        elif "application_link" in d and "application_url" not in d:
-            d["application_url"] = d["application_link"]
-        if "name" in d and "certification_name" not in d:
-            d["certification_name"] = d["name"]
-        elif "certification_name" in d and "name" not in d:
-            d["name"] = d["certification_name"]
+        comp = d.get("company_name") or d.get("company")
+        if comp:
+            d["company_name"] = comp
+            d["company"] = comp
+
+        app_url = d.get("application_link") or d.get("application_url")
+        if app_url:
+            d["application_link"] = app_url
+            d["application_url"] = app_url
+
+        cert_name = d.get("certification_name") or d.get("name")
+        if cert_name:
+            d["certification_name"] = cert_name
+            d["name"] = cert_name
         return d
 
     @property
@@ -461,6 +463,39 @@ def init_db():
             )
         """)
 
+        # 11. Student Applications Table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS applications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                opportunity_id INTEGER NOT NULL,
+                student_name TEXT,
+                student_email TEXT,
+                contact_phone TEXT,
+                portfolio_url TEXT,
+                cover_note TEXT,
+                status TEXT DEFAULT 'Under Review',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE
+            )
+        """ if backend == "sqlite" else """
+            CREATE TABLE IF NOT EXISTS applications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                student_id INT NOT NULL,
+                opportunity_id INT NOT NULL,
+                student_name VARCHAR(255),
+                student_email VARCHAR(255),
+                contact_phone VARCHAR(50),
+                portfolio_url VARCHAR(500),
+                cover_note TEXT,
+                status VARCHAR(50) DEFAULT 'Under Review',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE
+            )
+        """)
+
         # Column migrations for existing tables
         alter_statements = [
             "ALTER TABLE skills ADD COLUMN description TEXT",
@@ -481,6 +516,27 @@ def init_db():
                 db.commit()
             except Exception:
                 pass
+
+        # Update dead placeholder example.com URLs to genuine industry job search portals
+        try:
+            cur.execute("""
+                UPDATE opportunities
+                SET application_url = CASE 
+                    WHEN domain LIKE '%Data%' THEN 'https://www.linkedin.com/jobs/search/?keywords=Data+Analyst+Intern'
+                    WHEN domain LIKE '%AI%' OR domain LIKE '%Machine%' THEN 'https://www.linkedin.com/jobs/search/?keywords=Machine+Learning+Intern'
+                    WHEN domain LIKE '%Web%' OR domain LIKE '%Full%' THEN 'https://www.linkedin.com/jobs/search/?keywords=Web+Developer+Intern'
+                    WHEN domain LIKE '%Cloud%' THEN 'https://www.linkedin.com/jobs/search/?keywords=Cloud+Computing+Intern'
+                    WHEN domain LIKE '%Security%' THEN 'https://www.linkedin.com/jobs/search/?keywords=Cyber+Security+Intern'
+                    ELSE 'https://www.linkedin.com/jobs/search/?keywords=Software+Engineer+Intern'
+                END
+                WHERE application_url IS NULL OR application_url LIKE '%example.com%' OR application_url = ''
+            """)
+            cur.execute("UPDATE opportunities SET company_name = company WHERE (company_name IS NULL OR company_name = '') AND company IS NOT NULL")
+            cur.execute("UPDATE opportunities SET company = company_name WHERE (company IS NULL OR company = '') AND company_name IS NOT NULL")
+            cur.execute("UPDATE opportunities SET application_link = application_url WHERE (application_link IS NULL OR application_link LIKE '%example.com%' OR application_link = '') AND application_url IS NOT NULL")
+            db.commit()
+        except Exception:
+            pass
 
         # Create helpful indexes
         indexes = [

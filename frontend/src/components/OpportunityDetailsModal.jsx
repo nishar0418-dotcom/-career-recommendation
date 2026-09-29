@@ -13,7 +13,7 @@ import {
   Layers
 } from 'lucide-react';
 
-const OpportunityDetailsModal = ({ opportunity, studentSkills = [], onClose }) => {
+const OpportunityDetailsModal = ({ opportunity, studentSkills = [], onClose, onApply, isApplied = false }) => {
   if (!opportunity) return null;
 
   const matchPct = opportunity.match_percentage !== undefined ? opportunity.match_percentage : null;
@@ -238,19 +238,31 @@ const OpportunityDetailsModal = ({ opportunity, studentSkills = [], onClose }) =
         )}
 
         {/* Actions Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', alignItems: 'center' }}>
           <button onClick={onClose} className="btn btn-secondary">
             Close
           </button>
-          <a
-            href={opportunity.application_link || 'https://linkedin.com'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            Apply Directly <ExternalLink size={16} />
-          </a>
+          {isApplied ? (
+            <span className="badge badge-success" style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2 size={16} /> Applied ✓
+            </span>
+          ) : (
+            <button
+              onClick={() => {
+                if (onApply) {
+                  onApply(opportunity);
+                } else if (opportunity.application_link && !opportunity.application_link.includes('example.com')) {
+                  window.open(opportunity.application_link, '_blank', 'noopener,noreferrer');
+                } else {
+                  window.open(`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(opportunity.title || 'Internship')}&location=${encodeURIComponent(opportunity.location || 'India')}`, '_blank', 'noopener,noreferrer');
+                }
+              }}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              Apply to Company <ExternalLink size={16} />
+            </button>
+          )}
         </div>
       </div>
     </div>

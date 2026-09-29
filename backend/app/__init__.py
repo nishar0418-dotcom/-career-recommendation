@@ -11,6 +11,7 @@ from app.routes.recommendations import recommendations_bp
 from app.routes.skill_gap import skill_gap_bp
 from app.routes.opportunities import opportunities_bp
 from app.routes.admin import admin_bp
+from app.routes.applications import applications_bp
 
 def create_app():
     app = Flask(__name__)
@@ -26,6 +27,7 @@ def create_app():
     app.register_blueprint(skill_gap_bp, url_prefix="/api")
     app.register_blueprint(opportunities_bp, url_prefix="/api")
     app.register_blueprint(admin_bp, url_prefix="/api")
+    app.register_blueprint(applications_bp, url_prefix="/api")
 
     @app.route("/", methods=["GET"])
     def root():

@@ -145,3 +145,23 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(50) DEFAULT 'student',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 10. Student Job & Internship Applications Table
+CREATE TABLE IF NOT EXISTS applications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    opportunity_id INTEGER NOT NULL,
+    student_name VARCHAR(255),
+    student_email VARCHAR(255),
+    contact_phone VARCHAR(50),
+    portfolio_url VARCHAR(500),
+    cover_note TEXT,
+    status VARCHAR(50) DEFAULT 'Under Review',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_applications_student ON applications(student_id);
+CREATE INDEX IF NOT EXISTS idx_applications_opp ON applications(opportunity_id);
+
