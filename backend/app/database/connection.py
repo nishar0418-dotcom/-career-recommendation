@@ -76,15 +76,30 @@ class UnifiedCursor:
         row = self.cursor.fetchone()
         if row is None:
             return None
-        if self.is_sqlite and isinstance(row, sqlite3.Row):
-            return dict(row)
-        return row
+        return self._normalize_row(row)
 
     def fetchall(self):
         rows = self.cursor.fetchall()
-        if self.is_sqlite:
-            return [dict(r) if isinstance(r, sqlite3.Row) else r for r in rows]
-        return rows
+        return [self._normalize_row(r) for r in rows]
+
+    def _normalize_row(self, row):
+        if row is None:
+            return None
+        d = dict(row)
+        # Compatibility aliases for opportunities and certifications
+        if "company_name" in d and "company" not in d:
+            d["company"] = d["company_name"]
+        elif "company" in d and "company_name" not in d:
+            d["company_name"] = d["company"]
+        if "application_url" in d and "application_link" not in d:
+            d["application_link"] = d["application_url"]
+        elif "application_link" in d and "application_url" not in d:
+            d["application_url"] = d["application_link"]
+        if "name" in d and "certification_name" not in d:
+            d["certification_name"] = d["name"]
+        elif "certification_name" in d and "name" not in d:
+            d["name"] = d["certification_name"]
+        return d
 
     @property
     def lastrowid(self):
@@ -153,14 +168,49 @@ def execute_db(query, args=()):
         return cur.lastrowid
 
 def init_db():
-    """Initializes tables and seeds baseline data if empty."""
+    """Initializes normalized relational tables, constraints, indexes, and seeds baseline data."""
     backend = get_active_backend()
     print(f"[DB] Initializing database using backend: {backend.upper()}")
     
     with get_db() as db:
         cur = db.cursor()
         
-        # Create users table
+        # 1. Students Table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS students (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT,
+                role TEXT DEFAULT 'student',
+                department TEXT,
+                year TEXT,
+                cgpa REAL DEFAULT 0.00,
+                preferred_domain TEXT,
+                preferred_location TEXT,
+                opportunity_type TEXT DEFAULT 'Both',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """ if backend == "sqlite" else """
+            CREATE TABLE IF NOT EXISTS students (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255),
+                role VARCHAR(50) DEFAULT 'student',
+                department VARCHAR(255),
+                year VARCHAR(50),
+                cgpa DECIMAL(4,2) DEFAULT 0.00,
+                preferred_domain VARCHAR(255),
+                preferred_location VARCHAR(255),
+                opportunity_type VARCHAR(50) DEFAULT 'Both',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 2. Users Table (Maintained for auth integration)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -185,7 +235,7 @@ def init_db():
             )
         """)
         
-        # Create student_profiles table
+        # 3. Student Profiles Table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS student_profiles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,43 +266,117 @@ def init_db():
             )
         """)
 
-        # Create skills table
+        # 4. Skills Taxonomy Table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS skills (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 skill_name TEXT NOT NULL UNIQUE,
-                category TEXT NOT NULL
+                category TEXT NOT NULL,
+                description TEXT
             )
         """ if backend == "sqlite" else """
             CREATE TABLE IF NOT EXISTS skills (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 skill_name VARCHAR(100) NOT NULL UNIQUE,
-                category VARCHAR(100) NOT NULL
+                category VARCHAR(100) NOT NULL,
+                description TEXT
             )
         """)
 
-        # Create student_skills table
+        # 5. Student Skills Normalized Relationship Table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS student_skills (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL,
+                skill_id INTEGER,
                 skill_name TEXT NOT NULL,
                 proficiency TEXT DEFAULT 'Intermediate',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
             )
         """ if backend == "sqlite" else """
             CREATE TABLE IF NOT EXISTS student_skills (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 student_id INT NOT NULL,
+                skill_id INT,
                 skill_name VARCHAR(100) NOT NULL,
                 proficiency VARCHAR(50) DEFAULT 'Intermediate',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
             )
         """)
 
-        # Create projects table
+        # 6. Opportunities Table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS opportunities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_name TEXT NOT NULL,
+                company TEXT,
+                title TEXT NOT NULL,
+                description TEXT,
+                domain TEXT NOT NULL,
+                required_skills TEXT,
+                preferred_skills TEXT,
+                qualification TEXT,
+                minimum_cgpa REAL DEFAULT 0.00,
+                location TEXT,
+                opportunity_type TEXT DEFAULT 'Internship',
+                work_mode TEXT DEFAULT 'Hybrid',
+                stipend_or_salary TEXT DEFAULT 'Competitive',
+                application_url TEXT,
+                application_link TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """ if backend == "sqlite" else """
+            CREATE TABLE IF NOT EXISTS opportunities (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                company_name VARCHAR(255) NOT NULL,
+                company VARCHAR(255),
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                domain VARCHAR(100) NOT NULL,
+                required_skills TEXT,
+                preferred_skills TEXT,
+                qualification VARCHAR(255),
+                minimum_cgpa DECIMAL(4,2) DEFAULT 0.00,
+                location VARCHAR(255),
+                opportunity_type VARCHAR(50) DEFAULT 'Internship',
+                work_mode VARCHAR(50) DEFAULT 'Hybrid',
+                stipend_or_salary VARCHAR(100) DEFAULT 'Competitive',
+                application_url VARCHAR(500),
+                application_link VARCHAR(500),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # 7. Opportunity Skills Normalized Relationship Table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS opportunity_skills (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                opportunity_id INTEGER NOT NULL,
+                skill_id INTEGER NOT NULL,
+                is_required INTEGER DEFAULT 1,
+                importance_weight REAL DEFAULT 1.00,
+                FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE,
+                FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+                UNIQUE(opportunity_id, skill_id)
+            )
+        """ if backend == "sqlite" else """
+            CREATE TABLE IF NOT EXISTS opportunity_skills (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                opportunity_id INT NOT NULL,
+                skill_id INT NOT NULL,
+                is_required INT DEFAULT 1,
+                importance_weight DECIMAL(3,2) DEFAULT 1.00,
+                FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE,
+                FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_opp_skill (opportunity_id, skill_id)
+            )
+        """)
+
+        # 8. Projects Table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS projects (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -261,7 +385,7 @@ def init_db():
                 description TEXT,
                 technologies TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
             )
         """ if backend == "sqlite" else """
             CREATE TABLE IF NOT EXISTS projects (
@@ -271,81 +395,50 @@ def init_db():
                 description TEXT,
                 technologies TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
             )
         """)
 
-        # Create certifications table
+        # 9. Certifications Table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS certifications (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL,
-                certification_name TEXT NOT NULL,
+                name TEXT NOT NULL,
+                certification_name TEXT,
                 organization TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
             )
         """ if backend == "sqlite" else """
             CREATE TABLE IF NOT EXISTS certifications (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 student_id INT NOT NULL,
-                certification_name VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                certification_name VARCHAR(255),
                 organization VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
             )
         """)
 
-        # Create opportunities table
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS opportunities (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                company TEXT NOT NULL,
-                title TEXT NOT NULL,
-                description TEXT,
-                domain TEXT NOT NULL,
-                required_skills TEXT NOT NULL,
-                preferred_skills TEXT,
-                qualification TEXT,
-                minimum_cgpa REAL DEFAULT 0.00,
-                location TEXT,
-                opportunity_type TEXT DEFAULT 'Internship',
-                work_mode TEXT DEFAULT 'Hybrid',
-                stipend_or_salary TEXT DEFAULT 'Competitive',
-                application_link TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """ if backend == "sqlite" else """
-            CREATE TABLE IF NOT EXISTS opportunities (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                company VARCHAR(255) NOT NULL,
-                title VARCHAR(255) NOT NULL,
-                description TEXT,
-                domain VARCHAR(100) NOT NULL,
-                required_skills TEXT NOT NULL,
-                preferred_skills TEXT,
-                qualification VARCHAR(255),
-                minimum_cgpa DECIMAL(4,2) DEFAULT 0.00,
-                location VARCHAR(255),
-                opportunity_type VARCHAR(50) DEFAULT 'Internship',
-                work_mode VARCHAR(50) DEFAULT 'Hybrid',
-                stipend_or_salary VARCHAR(100) DEFAULT 'Competitive',
-                application_link VARCHAR(500),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        # Create recommendations table
+        # 10. Recommendations Table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS recommendations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL,
                 opportunity_id INTEGER NOT NULL,
-                match_percentage REAL NOT NULL,
+                skill_match_score REAL DEFAULT 0.0,
+                interest_match_score REAL DEFAULT 0.0,
+                qualification_score REAL DEFAULT 0.0,
+                project_match_score REAL DEFAULT 0.0,
+                preference_score REAL DEFAULT 0.0,
+                final_score REAL NOT NULL,
+                match_percentage REAL,
                 matching_skills TEXT,
                 missing_skills TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
                 FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE
             )
         """ if backend == "sqlite" else """
@@ -353,18 +446,60 @@ def init_db():
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 student_id INT NOT NULL,
                 opportunity_id INT NOT NULL,
-                match_percentage DECIMAL(5,2) NOT NULL,
+                skill_match_score DECIMAL(5,2) DEFAULT 0.00,
+                interest_match_score DECIMAL(5,2) DEFAULT 0.00,
+                qualification_score DECIMAL(5,2) DEFAULT 0.00,
+                project_match_score DECIMAL(5,2) DEFAULT 0.00,
+                preference_score DECIMAL(5,2) DEFAULT 0.00,
+                final_score DECIMAL(5,2) NOT NULL,
+                match_percentage DECIMAL(5,2),
                 matching_skills TEXT,
                 missing_skills TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
                 FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE
             )
         """)
+
+        # Column migrations for existing tables
+        alter_statements = [
+            "ALTER TABLE skills ADD COLUMN description TEXT",
+            "ALTER TABLE opportunities ADD COLUMN application_url TEXT",
+            "ALTER TABLE opportunities ADD COLUMN company_name TEXT",
+            "ALTER TABLE student_skills ADD COLUMN skill_id INTEGER",
+            "ALTER TABLE certifications ADD COLUMN name TEXT",
+            "ALTER TABLE recommendations ADD COLUMN skill_match_score REAL DEFAULT 0.0",
+            "ALTER TABLE recommendations ADD COLUMN interest_match_score REAL DEFAULT 0.0",
+            "ALTER TABLE recommendations ADD COLUMN qualification_score REAL DEFAULT 0.0",
+            "ALTER TABLE recommendations ADD COLUMN project_match_score REAL DEFAULT 0.0",
+            "ALTER TABLE recommendations ADD COLUMN preference_score REAL DEFAULT 0.0",
+            "ALTER TABLE recommendations ADD COLUMN final_score REAL DEFAULT 0.0",
+        ]
+        for stmt in alter_statements:
+            try:
+                cur.execute(stmt)
+                db.commit()
+            except Exception:
+                pass
+
+        # Create helpful indexes
+        indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_students_email ON students(email)",
+            "CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(skill_name)",
+            "CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category)",
+            "CREATE INDEX IF NOT EXISTS idx_student_skills_student ON student_skills(student_id)",
+            "CREATE INDEX IF NOT EXISTS idx_opp_skills_opp ON opportunity_skills(opportunity_id)",
+            "CREATE INDEX IF NOT EXISTS idx_recommendations_student ON recommendations(student_id)",
+        ]
+        for idx_sql in indexes:
+            try:
+                cur.execute(idx_sql)
+            except Exception:
+                pass
         
         db.commit()
 
-    # Seed baseline items if opportunities is empty
+    # Seed baseline items
     seed_defaults()
 
 def seed_defaults():
