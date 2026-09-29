@@ -50,7 +50,9 @@ def token_required(f):
         if not user:
             return jsonify({"error": "User account no longer exists"}), 401
         
-        request.current_user = user
+        user_dict = dict(user)
+        user_dict["year_of_study"] = user_dict.get("year", "")
+        request.current_user = user_dict
         return f(*args, **kwargs)
     return decorated
 

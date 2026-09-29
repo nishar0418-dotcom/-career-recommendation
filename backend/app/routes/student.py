@@ -147,7 +147,98 @@ def update_profile():
     return jsonify({"message": "Student profile updated successfully."}), 200
 
 
+@student_bp.route("/skills", methods=["GET"])
 @student_bp.route("/skills-catalog", methods=["GET"])
 def get_skills_catalog():
-    rows = query_db("SELECT skill_name, category FROM skills ORDER BY category, skill_name ASC")
-    return jsonify({"skills": rows}), 200
+    rows = query_db("SELECT skill_name, category FROM skills ORDER BY category, skill_name ASC") or []
+    categories = {}
+    for r in rows:
+        cat = r.get("category") or "General"
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(r.get("skill_name"))
+
+    return jsonify({
+        "skills": rows,
+        "categories": categories
+    }), 200
+
+
+@student_bp.route("/skills", methods=["POST"])
+@token_required
+def add_student_skill():
+    u_id = request.current_user["id"]
+    data = request.get_json() or {}
+    skill_name = (data.get("skill_name") or data.get("name") or "").strip()
+    proficiency = data.get("proficiency") or "Intermediate"
+
+    if not skill_name:
+        return jsonify({"error": "Skill name is required"}), 400
+
+    execute_db(
+        "INSERT INTO student_skills (student_id, skill_name, proficiency) VALUES (%s, %s, %s)",
+        (u_id, skill_name, proficiency)
+    )
+    return jsonify({"message": f"Skill '{skill_name}' added successfully."}), 201
+
+
+@student_bp.route("/skills/<int:skill_id>", methods=["DELETE"])
+@token_required
+def delete_student_skill(skill_id):
+    u_id = request.current_user["id"]
+    execute_db("DELETE FROM student_skills WHERE id = %s AND student_id = %s", (skill_id, u_id))
+    return jsonify({"message": "Skill deleted successfully."}), 200
+
+
+@student_bp.route("/projects", methods=["POST"])
+@token_required
+def add_student_project():
+    u_id = request.current_user["id"]
+    data = request.get_json() or {}
+    name = (data.get("project_name") or "").strip()
+    desc = (data.get("description") or "").strip()
+    tech = (data.get("technologies") or "").strip()
+
+    if not name:
+        return jsonify({"error": "Project name is required"}), 400
+
+    new_id = execute_db(
+        "INSERT INTO projects (student_id, project_name, description, technologies) VALUES (%s, %s, %s, %s)",
+        (u_id, name, desc, tech)
+    )
+    return jsonify({"message": "Project added successfully.", "id": new_id}), 201
+
+
+@student_bp.route("/projects/<int:project_id>", methods=["DELETE"])
+@token_required
+def delete_student_project(project_id):
+    u_id = request.current_user["id"]
+    execute_db("DELETE FROM projects WHERE id = %s AND student_id = %s", (project_id, u_id))
+    return jsonify({"message": "Project deleted successfully."}), 200
+
+
+@student_bp.route("/certifications", methods=["POST"])
+@token_required
+def add_student_cert():
+    u_id = request.current_user["id"]
+    data = request.get_json() or {}
+    name = (data.get("certification_name") or "").strip()
+    org = (data.get("organization") or "").strip()
+
+    if not name:
+        return jsonify({"error": "Certification name is required"}), 400
+
+    new_id = execute_db(
+        "INSERT INTO certifications (student_id, certification_name, organization) VALUES (%s, %s, %s)",
+        (u_id, name, org)
+    )
+    return jsonify({"message": "Certification added successfully.", "id": new_id}), 201
+
+
+@student_bp.route("/certifications/<int:cert_id>", methods=["DELETE"])
+@token_required
+def delete_student_cert(cert_id):
+    u_id = request.current_user["id"]
+    execute_db("DELETE FROM certifications WHERE id = %s AND student_id = %s", (cert_id, u_id))
+    return jsonify({"message": "Certification deleted successfully."}), 200
+

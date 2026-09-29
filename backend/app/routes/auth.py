@@ -13,7 +13,7 @@ def register():
     password = data.get("password") or ""
     confirm_password = data.get("confirm_password") or ""
     department = (data.get("department") or "").strip()
-    year = (data.get("year") or "").strip()
+    year = (data.get("year") or data.get("year_of_study") or "").strip()
 
     if not name or not email or not password:
         return jsonify({"error": "Full Name, Email, and Password are required."}), 400
@@ -50,6 +50,7 @@ def register():
             "email": email,
             "department": department,
             "year": year,
+            "year_of_study": year,
             "role": "student"
         }
     }), 201
@@ -69,6 +70,7 @@ def login():
         return jsonify({"error": "Invalid email or password."}), 401
 
     token = generate_token(user["id"], user["email"], role=user.get("role", "student"))
+    user_year = user.get("year", "")
     return jsonify({
         "message": "Login successful.",
         "token": token,
@@ -77,7 +79,8 @@ def login():
             "name": user["name"],
             "email": user["email"],
             "department": user.get("department", ""),
-            "year": user.get("year", ""),
+            "year": user_year,
+            "year_of_study": user_year,
             "role": user.get("role", "student")
         }
     }), 200
@@ -95,7 +98,7 @@ def google_login():
     email = (data.get("email") or "alex.google@gmail.com").strip().lower()
     name = (data.get("name") or "Alex (Google User)").strip()
     department = (data.get("department") or "Computer Science & Engineering").strip()
-    year = (data.get("year") or "3rd Year").strip()
+    year = (data.get("year") or data.get("year_of_study") or "3rd Year").strip()
 
     user = query_db("SELECT * FROM users WHERE email = %s", (email,), one=True)
     if not user:
@@ -113,6 +116,7 @@ def google_login():
         user = query_db("SELECT * FROM users WHERE id = %s", (user_id,), one=True)
 
     token = generate_token(user["id"], user["email"], role=user.get("role", "student"))
+    user_year = user.get("year", "")
     return jsonify({
         "message": "Google authentication successful.",
         "token": token,
@@ -121,7 +125,8 @@ def google_login():
             "name": user["name"],
             "email": user["email"],
             "department": user.get("department", ""),
-            "year": user.get("year", ""),
+            "year": user_year,
+            "year_of_study": user_year,
             "role": user.get("role", "student")
         }
     }), 200
