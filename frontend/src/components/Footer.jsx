@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, Sparkles, CheckCircle2, Shield } from 'lucide-react';
+import { Compass, CheckCircle2 } from 'lucide-react';
 
 const Footer = () => {
   return (

@@ -8,7 +8,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Pages
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import StudentProfilePage from './pages/StudentProfilePage';
 import AIAnalysisPage from './pages/AIAnalysisPage';
 import DashboardPage from './pages/DashboardPage';

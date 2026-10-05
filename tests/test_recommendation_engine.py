@@ -19,20 +19,57 @@ import os
 import unittest
 from typing import Dict, Any, List
 
-# Ensure backend directory is in python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.abspath(os.path.join(current_dir, "..", "backend"))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+# Ensure safe UTF-8 output on Windows consoles
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
-from app.ai.recommendation_engine import (
-    rank_opportunities,
-    calculate_skill_match,
-    calculate_interest_match,
-    calculate_qualification_cgpa_match,
-    calculate_project_match,
-    calculate_preference_match
-)
+# Ensure backend directory is in python path regardless of launch directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+potential_backend_paths = [
+    os.path.abspath(os.path.join(current_dir, "..", "backend")),
+    os.path.abspath(os.path.join(current_dir, "..", "career-recommendation-system", "backend")),
+    os.path.abspath(os.path.join(current_dir, "backend"))
+]
+for p in potential_backend_paths:
+    if os.path.isdir(p) and p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from app.ai.recommendation_engine import (
+        rank_opportunities,
+        calculate_skill_match,
+        calculate_interest_match,
+        calculate_qualification_cgpa_match,
+        calculate_project_match,
+        calculate_preference_match
+    )
+except ImportError:
+    try:
+        from backend.app.ai.recommendation_engine import (  # type: ignore
+            rank_opportunities,
+            calculate_skill_match,
+            calculate_interest_match,
+            calculate_qualification_cgpa_match,
+            calculate_project_match,
+            calculate_preference_match
+        )
+    except ImportError:
+        from career_recommendation_system.backend.app.ai.recommendation_engine import (  # type: ignore
+            rank_opportunities,
+            calculate_skill_match,
+            calculate_interest_match,
+            calculate_qualification_cgpa_match,
+            calculate_project_match,
+            calculate_preference_match
+        )
 
 
 def get_benchmark_opportunity() -> Dict[str, Any]:
@@ -73,7 +110,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         })
 
     def test_case_01_complete_profile(self):
-        """Case 1 — Complete Profile: normal weighted scoring across all 5 dimensions."""
+        """Case 1: Complete Profile - normal weighted scoring across all 5 dimensions."""
         student = {
             "student_id": 101,
             "skills": [
@@ -127,7 +164,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("Complete Profile", "Many (3)", "Yes (1)", "Yes", "Normal scoring", score, True)
 
     def test_case_02_no_projects(self):
-        """Case 2 — No Projects: sparse data re-normalization prevents severe penalty."""
+        """Case 2: No Projects - sparse data re-normalization prevents severe penalty."""
         student = {
             "student_id": 102,
             "skills": [
@@ -164,7 +201,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("No Projects", "Many (3)", "No", "Yes", "No severe penalty", score, True)
 
     def test_case_03_only_one_skill(self):
-        """Case 3 — Only One Skill: no crash, recommendations generated, clear skill gaps."""
+        """Case 3: Only One Skill - no crash, recommendations generated, clear skill gaps."""
         student = {
             "student_id": 103,
             "skills": [{"name": "Python", "proficiency": "intermediate"}],
@@ -190,7 +227,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("One Skill", "1", "No", "Yes", "Low-confidence result", score, True)
 
     def test_case_04_no_skills(self):
-        """Case 4 — No Skills: no crash, skill match is 0.0, no misleading high score."""
+        """Case 4: No Skills - no crash, skill match is 0.0, no misleading high score."""
         student = {
             "student_id": 104,
             "skills": [],
@@ -213,7 +250,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("No Skills", "0", "No", "No", "No misleading recommendation", score, True)
 
     def test_case_05_no_interests(self):
-        """Case 5 — No Interests: system applies neutral baseline (50%), not harsh 0%."""
+        """Case 5: No Interests - system applies neutral baseline (50%), not harsh 0%."""
         student = {
             "student_id": 105,
             "skills": ["Python", "SQL", "Pandas"],
@@ -232,7 +269,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("No Interests", "3", "No", "No", "Neutral baseline (50%)", top["final_score"], True)
 
     def test_case_06_no_projects_no_certifications(self):
-        """Case 6 — No Projects + No Certifications: extremely sparse profile works safely."""
+        """Case 6: No Projects + No Certifications - extremely sparse profile works safely."""
         student = {
             "student_id": 106,
             "skills": ["Python", "SQL"],
@@ -253,7 +290,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("No Projects/Certs", "2", "No", "Yes", "Safe sparse execution", top["final_score"], True)
 
     def test_case_07_exact_skill_match(self):
-        """Case 7 — Exact Skill Match: all required skills matched, high final score >= 95%."""
+        """Case 7: Exact Skill Match - all required skills matched, high final score >= 95%."""
         student = {
             "student_id": 107,
             "skills": [
@@ -288,7 +325,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("Exact Match", "Full (4)", "Yes", "Yes", "High score", score, True)
 
     def test_case_08_zero_skill_match(self):
-        """Case 8 — Zero Skill Match: student has completely unrelated skills."""
+        """Case 8: Zero Skill Match - student has completely unrelated skills."""
         student = {
             "student_id": 108,
             "skills": ["Photoshop", "Illustrator", "Figma", "UI Design"],
@@ -318,7 +355,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("Zero Skill Match", "Disjoint", "Yes", "No", "Low score & full gaps", score, True)
 
     def test_case_09_cgpa_below_requirement(self):
-        """Case 9 — CGPA Below Requirement: non-abrupt qualification score penalty."""
+        """Case 9: CGPA Below Requirement - non-abrupt qualification score penalty."""
         student = {
             "student_id": 109,
             "skills": ["Python", "SQL", "Pandas"],
@@ -339,7 +376,7 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.record_result("CGPA Below Cutoff", "3", "No", "Yes", "Proportional penalty", top["final_score"], True)
 
     def test_case_10_location_mismatch(self):
-        """Case 10 — Location Mismatch: evaluates preference reduction when location differs."""
+        """Case 10: Location Mismatch - evaluates preference reduction when location differs."""
         student = {
             "student_id": 110,
             "skills": ["Python", "SQL", "Pandas"],
@@ -362,6 +399,51 @@ class RecommendationEngineBenchmarkTests(unittest.TestCase):
         self.assertLess(top["final_score"], 86.0)
 
         self.record_result("Location Mismatch", "3", "No", "Yes", "Reduced preference score", top["final_score"], True)
+
+    # Unit tests for individual component scoring functions (verifies exports & prevents unused imports)
+    def test_component_skill_match_isolated(self):
+        """Tests calculate_skill_match in isolation."""
+        skills = [{"name": "Python", "proficiency": "advanced"}, {"name": "SQL"}]
+        required = ["Python", "SQL", "Docker"]
+        score, matched, missing = calculate_skill_match(skills, required)
+        self.assertEqual(len(matched), 2)
+        self.assertEqual(missing, ["Docker"])
+        self.assertGreater(score, 60.0)
+
+    def test_component_interest_match_isolated(self):
+        """Tests calculate_interest_match in isolation."""
+        score_direct = calculate_interest_match(["Data Science"], "Data Science", "Intern")
+        score_empty = calculate_interest_match([], "Data Science", "Intern")
+        self.assertEqual(score_direct, 100.0)
+        self.assertEqual(score_empty, 50.0)
+
+    def test_component_qualification_match_isolated(self):
+        """Tests calculate_qualification_cgpa_match in isolation."""
+        self.assertEqual(calculate_qualification_cgpa_match(8.5, 7.0), 100.0)
+        self.assertEqual(calculate_qualification_cgpa_match(6.7, 7.0), 75.0)
+        self.assertEqual(calculate_qualification_cgpa_match(6.2, 7.0), 45.0)
+
+    def test_component_project_match_isolated(self):
+        """Tests calculate_project_match in isolation."""
+        score_none, has_p = calculate_project_match([], "Data Analyst", ["Python", "SQL"])
+        self.assertIsNone(score_none)
+        self.assertFalse(has_p)
+
+        projects = [{"name": "Sales ML", "description": "Python data models", "technologies": ["Python"]}]
+        score_val, has_p2 = calculate_project_match(projects, "Data Analyst Python", ["Python"])
+        self.assertTrue(has_p2)
+        self.assertIsNotNone(score_val)
+        self.assertGreater(score_val, 0.0)
+
+    def test_component_preference_match_isolated(self):
+        """Tests calculate_preference_match in isolation."""
+        student_pref = {"preferred_location": "Coimbatore", "opportunity_type": "Internship", "work_mode": "Hybrid"}
+        opp_match = {"location": "Coimbatore", "opportunity_type": "Internship", "work_mode": "Hybrid"}
+        opp_remote = {"location": "Bangalore", "opportunity_type": "Internship", "work_mode": "Remote"}
+        
+        self.assertEqual(calculate_preference_match(student_pref, opp_match), 100.0)
+        self.assertEqual(calculate_preference_match(student_pref, opp_remote), 95.0)
+
 
 
 def run_benchmark_and_generate_summary():

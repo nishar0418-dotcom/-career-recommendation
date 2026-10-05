@@ -43,7 +43,7 @@ def token_required(f):
             return jsonify({"error": "Token is invalid or expired"}), 401
         
         user = query_db(
-            "SELECT id, name, email, department, year, role FROM users WHERE id = %s",
+            "SELECT id, name, email, department, year, college, qualification, role FROM users WHERE id = %s",
             (payload["user_id"],),
             one=True
         )
@@ -52,6 +52,8 @@ def token_required(f):
         
         user_dict = dict(user)
         user_dict["year_of_study"] = user_dict.get("year", "")
+        user_dict["college"] = user_dict.get("college") or "Rathinam Group of Institutions"
+        user_dict["qualification"] = user_dict.get("qualification") or "B.E. Computer Science and Engineering"
         request.current_user = user_dict
         return f(*args, **kwargs)
     return decorated

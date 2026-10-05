@@ -12,7 +12,6 @@ import {
   ArrowRight, 
   Building2, 
   MapPin, 
-  CheckCircle2, 
   Compass, 
   BarChart2, 
   BookOpen
@@ -91,15 +90,17 @@ const DashboardPage = () => {
           gap: '16px'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
               <span className="badge badge-primary">Student Dashboard</span>
-              <span className="badge badge-neutral">{user?.year_of_study || user?.year || 'Student'}</span>
+              <span className="badge badge-neutral">{user?.college || profile?.college || 'Rathinam Technical Campus'}</span>
+              <span className="badge badge-secondary">{user?.qualification || profile?.qualification || 'B.E. Computer Science and Engineering'}</span>
+              <span className="badge badge-neutral">{user?.year_of_study || user?.year || '3rd Year'}</span>
             </div>
             <h1 style={{ fontSize: '2.2rem', color: 'var(--text-primary)' }}>
-              Welcome back, {user?.name ? user.name.split(' ')[0] : 'Student'} 👋
+              Welcome back, {user?.name || 'Nisha R'} 👋
             </h1>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              Here is an overview of your skill profile, AI match metrics, and recommended opportunities.
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+              <strong>{user?.college || 'Rathinam Technical Campus'}</strong> • {user?.department || 'Computer Science & Engineering'} • {user?.qualification || 'B.E. CSE'}
             </p>
           </div>
 

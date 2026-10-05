@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  Compass, 
   Mail, 
   Lock, 
   LogIn, 
@@ -10,9 +9,8 @@ import {
   AlertCircle, 
   Sparkles, 
   ShieldCheck, 
-  User, 
-  GraduationCap, 
-  Building2 
+  User,
+  Compass
 } from 'lucide-react';
 
 const LoginPage = () => {
@@ -138,16 +136,62 @@ const LoginPage = () => {
 
   const handleGoogleSignIn = async () => {
     setError('');
+    
+    // Check currently entered email from login input or registration input
+    let targetEmail = (mode === 'login' ? email : regData.email)?.trim();
+    
+    if (!targetEmail) {
+      // If the email field is empty, prompt the user for their Google email
+      const prompted = window.prompt(
+        'Enter your Google account email to continue:',
+        'student@careermatch.ai'
+      );
+      if (!prompted || !prompted.trim()) {
+        return; // User canceled
+      }
+      targetEmail = prompted.trim();
+      if (mode === 'login') {
+        setEmail(targetEmail);
+      } else {
+        setRegData(prev => ({ ...prev, email: targetEmail }));
+      }
+    }
+
+    if (!targetEmail.includes('@') || !targetEmail.includes('.')) {
+      setError('Please provide a valid Google email address.');
+      return;
+    }
+
+    // Derive display name from email or form input
+    let targetName = mode === 'register' ? regData.name?.trim() : '';
+    if (!targetName) {
+      const localPart = targetEmail.split('@')[0];
+      targetName = localPart
+        .replace(/[._-]/g, ' ')
+        .replace(/[0-9]/g, '')
+        .trim()
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ') || 'Google User';
+    }
+
     setGoogleLoading(true);
     try {
-      await googleLogin({
-        email: 'alex.google@gmail.com',
-        name: 'Alex Johnson (Google)',
+      const loggedUser = await googleLogin({
+        email: targetEmail,
+        name: targetName,
+        department: regData.department || 'Computer Science & Engineering',
+        year: regData.year_of_study || '3rd Year',
       });
-      navigate('/dashboard');
+      if (loggedUser?.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate(from === '/login' || from === '/register' || from === '/' ? '/dashboard' : from);
+      }
     } catch (err) {
       console.error(err);
-      setError('Google Sign-In failed. Please try again.');
+      setError(err.response?.data?.error || 'Google Sign-In failed. Please try again.');
     } finally {
       setGoogleLoading(false);
     }
@@ -311,7 +355,7 @@ const LoginPage = () => {
                   <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
                   <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                 </svg>
-                {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
+                {googleLoading ? 'Signing in with Google...' : (email.trim() ? `Continue with Google (${email.trim()})` : 'Continue with Google')}
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '10px' }}>
@@ -398,7 +442,47 @@ const LoginPage = () => {
 
           {/* MODE 2: SIGN UP / REGISTER FORM */}
           {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit}>
+            <div>
+              {/* Google Sign Up */}
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading || loading}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  padding: '10px 16px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-xs)',
+                  transition: 'all 0.15s ease',
+                  marginBottom: '16px'
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                </svg>
+                {googleLoading ? 'Signing up with Google...' : (regData.email.trim() ? `Sign Up with Google (${regData.email.trim()})` : 'Continue with Google')}
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '10px' }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600' }}>or register with email</span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+              </div>
+
+              <form onSubmit={handleRegisterSubmit}>
               <div className="form-group" style={{ marginBottom: '12px' }}>
                 <label className="form-label" htmlFor="reg-name">Full Name</label>
                 <div style={{ position: 'relative' }}>
@@ -512,7 +596,8 @@ const LoginPage = () => {
                 )}
               </button>
             </form>
-          )}
+          </div>
+        )}
         </div>
       </div>
     </div>

@@ -4,13 +4,10 @@ import { aiService } from '../services/api';
 import { 
   Sparkles, 
   CheckCircle2, 
-  TrendingUp, 
   BrainCircuit, 
   Compass, 
   ArrowRight, 
   AlertCircle, 
-  Award,
-  Layers,
   BarChart3,
   Target
 } from 'lucide-react';

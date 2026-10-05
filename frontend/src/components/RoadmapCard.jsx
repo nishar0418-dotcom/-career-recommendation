@@ -3,14 +3,9 @@ import {
   CheckCircle2, 
   Circle, 
   Check, 
-  Sparkles, 
   BookOpen, 
-  FolderGit2, 
   ExternalLink, 
   Trophy, 
-  ArrowRight,
-  Clock,
-  RotateCcw,
   Plus
 } from 'lucide-react';
 

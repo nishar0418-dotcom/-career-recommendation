@@ -6,7 +6,6 @@ track application status, and view application receipts.
 """
 
 from flask import Blueprint, request, jsonify
-from datetime import datetime, timezone
 from app.database.connection import query_db, execute_db
 from app.utils.auth import decode_token
 

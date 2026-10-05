@@ -63,6 +63,14 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  const updateUser = (newFields) => {
+    setUser(prev => {
+      const updated = { ...prev, ...newFields };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -74,7 +82,7 @@ export const AuthProvider = ({ children }) => {
   const isStudent = user?.role === 'student';
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, googleLogin, logout, isAdmin, isStudent }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, googleLogin, logout, isAdmin, isStudent, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

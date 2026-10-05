@@ -99,10 +99,10 @@ const Navbar = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '8px', borderLeft: '1px solid var(--border-subtle)' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                    {user.name.split(' ')[0]}
+                    {(user?.name || 'Student').split(' ')[0]}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {isAdmin ? 'Administrator' : (user.department ? user.department.substring(0, 18) : 'Student')}
+                    {isAdmin ? 'Administrator' : (user?.department ? user.department.substring(0, 18) : 'Student')}
                   </div>
                 </div>
 

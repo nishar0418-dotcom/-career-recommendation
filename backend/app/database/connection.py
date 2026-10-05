@@ -1,7 +1,21 @@
 import os
+import sys
 import sqlite3
-import pymysql
-from pymysql.cursors import DictCursor
+
+# Ensure backend root is always on sys.path
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_backend_dir = os.path.abspath(os.path.join(_current_dir, "..", ".."))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+try:
+    import pymysql
+    from pymysql.cursors import DictCursor
+    HAS_PYMYSQL = True
+except ImportError:
+    pymysql = None
+    DictCursor = None
+    HAS_PYMYSQL = False
 
 DB_TYPE = os.getenv("DB_TYPE", "auto").lower()
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
@@ -17,6 +31,9 @@ SQLITE_PATH = os.path.abspath(
 _active_backend = None
 
 def test_mysql_connection():
+    if not HAS_PYMYSQL:
+        print("[DB] pymysql not installed. Defaulting to SQLite fallback for instant zero-config launch.")
+        return False
     try:
         conn = pymysql.connect(
             host=MYSQL_HOST,
@@ -138,7 +155,7 @@ class UnifiedConnection:
 
 def get_db():
     backend = get_active_backend()
-    if backend == "mysql":
+    if backend == "mysql" and HAS_PYMYSQL and pymysql is not None:
         raw = pymysql.connect(
             host=MYSQL_HOST,
             port=MYSQL_PORT,
@@ -509,6 +526,12 @@ def init_db():
             "ALTER TABLE recommendations ADD COLUMN project_match_score REAL DEFAULT 0.0",
             "ALTER TABLE recommendations ADD COLUMN preference_score REAL DEFAULT 0.0",
             "ALTER TABLE recommendations ADD COLUMN final_score REAL DEFAULT 0.0",
+            "ALTER TABLE users ADD COLUMN college TEXT",
+            "ALTER TABLE users ADD COLUMN qualification TEXT",
+            "ALTER TABLE students ADD COLUMN college TEXT",
+            "ALTER TABLE students ADD COLUMN qualification TEXT",
+            "ALTER TABLE student_profiles ADD COLUMN college TEXT",
+            "ALTER TABLE student_profiles ADD COLUMN qualification TEXT",
         ]
         for stmt in alter_statements:
             try:
@@ -559,5 +582,11 @@ def init_db():
     seed_defaults()
 
 def seed_defaults():
-    from app.database.seed import seed_initial_data
+    try:
+        from app.database.seed import seed_initial_data
+    except ImportError:
+        try:
+            from database.seed import seed_initial_data
+        except ImportError:
+            from .seed import seed_initial_data
     seed_initial_data()

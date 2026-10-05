@@ -5,16 +5,12 @@ import RoadmapCard from '../components/RoadmapCard';
 import { 
   AlertCircle, 
   CheckCircle2, 
-  BookOpen, 
   Search, 
   Layers, 
   ArrowRight, 
   Sparkles, 
-  FolderGit2, 
   Check, 
-  ExternalLink,
-  Target,
-  Trophy,
+  Trophy, 
   RotateCcw
 } from 'lucide-react';
 

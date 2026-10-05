@@ -34,6 +34,12 @@ def register():
         (name, email, hashed_pw, department, year)
     )
 
+    # Keep students table synchronized
+    execute_db(
+        "INSERT OR IGNORE INTO students (id, name, email, password, role, department, year) VALUES (%s, %s, %s, %s, 'student', %s, %s)",
+        (user_id, name, email, hashed_pw, department, year)
+    )
+
     # Automatically create blank student profile
     execute_db(
         "INSERT INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode) VALUES (%s, 0.00, '', '', '', 'Both', 'Any')",
@@ -78,9 +84,11 @@ def login():
             "id": user["id"],
             "name": user["name"],
             "email": user["email"],
-            "department": user.get("department", ""),
+            "department": user.get("department", "Computer Science & Engineering"),
             "year": user_year,
             "year_of_study": user_year,
+            "college": user.get("college") or "Rathinam Group of Institutions",
+            "qualification": user.get("qualification") or "B.E. Computer Science and Engineering",
             "role": user.get("role", "student")
         }
     }), 200
@@ -96,7 +104,14 @@ def get_current_user_profile():
 def google_login():
     data = request.get_json() or {}
     email = (data.get("email") or "alex.google@gmail.com").strip().lower()
-    name = (data.get("name") or "Alex (Google User)").strip()
+    
+    # Generate friendly display name from email if not explicitly provided or generic
+    local_part = email.split("@")[0].replace(".", " ").replace("_", " ").replace("-", " ")
+    default_name = "".join(w.capitalize() + " " for w in local_part.split()).strip() or "Google User"
+    name = (data.get("name") or "").strip()
+    if not name or name == "Alex (Google User)":
+        name = default_name
+
     department = (data.get("department") or "Computer Science & Engineering").strip()
     year = (data.get("year") or data.get("year_of_study") or "3rd Year").strip()
 
@@ -109,10 +124,18 @@ def google_login():
             "INSERT INTO users (name, email, password, department, year, role) VALUES (%s, %s, %s, %s, %s, 'student')",
             (name, email, dummy_pass, department, year)
         )
-        execute_db(
-            "INSERT INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode) VALUES (%s, 8.00, 'Web Development,AI/ML', 'General Tech', 'Remote', 'Both', 'Any')",
-            (user_id,)
-        )
+        existing_student = query_db("SELECT id FROM students WHERE id = %s OR email = %s", (user_id, email), one=True)
+        if not existing_student:
+            execute_db(
+                "INSERT INTO students (id, name, email, password, role, department, year, cgpa, preferred_domain, preferred_location, opportunity_type) VALUES (%s, %s, %s, %s, 'student', %s, %s, 8.00, 'General Tech', 'Remote', 'Both')",
+                (user_id, name, email, dummy_pass, department, year)
+            )
+        existing_profile = query_db("SELECT id FROM student_profiles WHERE user_id = %s", (user_id,), one=True)
+        if not existing_profile:
+            execute_db(
+                "INSERT INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode) VALUES (%s, 8.00, 'Web Development,AI/ML', 'General Tech', 'Remote', 'Both', 'Any')",
+                (user_id,)
+            )
         user = query_db("SELECT * FROM users WHERE id = %s", (user_id,), one=True)
 
     token = generate_token(user["id"], user["email"], role=user.get("role", "student"))
@@ -124,9 +147,11 @@ def google_login():
             "id": user["id"],
             "name": user["name"],
             "email": user["email"],
-            "department": user.get("department", ""),
+            "department": user.get("department", "Computer Science & Engineering"),
             "year": user_year,
             "year_of_study": user_year,
+            "college": user.get("college") or "Rathinam Group of Institutions",
+            "qualification": user.get("qualification") or "B.E. Computer Science and Engineering",
             "role": user.get("role", "student")
         }
     }), 200

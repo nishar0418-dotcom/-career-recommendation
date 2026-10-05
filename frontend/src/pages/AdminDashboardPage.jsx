@@ -9,11 +9,7 @@ import {
   Plus, 
   Trash2, 
   Edit3, 
-  Building2, 
-  CheckCircle2, 
-  AlertCircle,
-  X,
-  MapPin
+  X
 } from 'lucide-react';
 
 const AdminDashboardPage = () => {

@@ -7,12 +7,9 @@ import {
   CheckCircle2, 
   X, 
   Send, 
-  ExternalLink,
-  Briefcase,
-  FileText,
-  User,
-  Mail,
-  Phone,
+  ExternalLink, 
+  FileText, 
+  Phone, 
   Globe
 } from 'lucide-react';
 import { applicationService } from '../services/api';

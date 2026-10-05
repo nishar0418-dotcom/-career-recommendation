@@ -69,16 +69,48 @@ const RegisterPage = () => {
 
   const handleGoogleSignIn = async () => {
     setError('');
+    
+    // Check if email is entered in form, or prompt user
+    let targetEmail = formData.email?.trim();
+    if (!targetEmail) {
+      const prompted = window.prompt('Enter your Google account email to continue:', 'student@careermatch.ai');
+      if (!prompted || !prompted.trim()) {
+        return; // User canceled
+      }
+      targetEmail = prompted.trim();
+      setFormData(prev => ({ ...prev, email: targetEmail }));
+    }
+
+    if (!targetEmail.includes('@') || !targetEmail.includes('.')) {
+      setError('Please provide a valid Google email address.');
+      return;
+    }
+
+    let targetName = formData.name?.trim();
+    if (!targetName) {
+      const localPart = targetEmail.split('@')[0];
+      targetName = localPart
+        .replace(/[._-]/g, ' ')
+        .replace(/[0-9]/g, '')
+        .trim()
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ') || 'Google User';
+    }
+
     setGoogleLoading(true);
     try {
       await googleLogin({
-        email: 'alex.google@gmail.com',
-        name: 'Alex Johnson (Google)',
+        email: targetEmail,
+        name: targetName,
+        department: formData.department,
+        year: formData.year_of_study,
       });
-      navigate('/profile');
+      navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      setError('Google Sign-In failed.');
+      setError(err.response?.data?.error || 'Google Sign-In failed.');
     } finally {
       setGoogleLoading(false);
     }
@@ -168,7 +200,7 @@ const RegisterPage = () => {
               <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
             </svg>
-            {googleLoading ? 'Connecting...' : 'Continue with Google'}
+            {googleLoading ? 'Connecting...' : (formData.email.trim() ? `Continue with Google (${formData.email.trim()})` : 'Continue with Google')}
           </button>
 
           {/* Divider */}

@@ -11,21 +11,31 @@ import {
   CheckCircle2, 
   Layers, 
   Award, 
-  Briefcase, 
   FolderGit2, 
   MapPin, 
-  Sliders,
-  AlertCircle
+  Sliders, 
+  GraduationCap, 
+  Building2, 
+  BookOpen, 
+  Calendar, 
+  Mail
 } from 'lucide-react';
 
 const StudentProfilePage = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Personal & Academic Identity fields
+  const [name, setName] = useState(user?.name || '');
+  const [college, setCollege] = useState(user?.college || 'Rathinam Group of Institutions');
+  const [department, setDepartment] = useState(user?.department || 'Computer Science & Engineering');
+  const [year, setYear] = useState(user?.year || user?.year_of_study || '3rd Year');
+  const [qualification, setQualification] = useState(user?.qualification || 'B.E. Computer Science and Engineering');
 
   // Profile fields
   const [cgpa, setCgpa] = useState('8.0');
@@ -71,6 +81,15 @@ const StudentProfilePage = () => {
       // 1. Fetch Profile
       const profileRes = await studentService.getProfile();
       const data = profileRes.data;
+
+      // Identity & Academic Credentials
+      const userObj = data.user || {};
+      const profObj = data.profile || {};
+      setName(userObj.name || profObj.name || user?.name || '');
+      setCollege(userObj.college || profObj.college || user?.college || 'Rathinam Group of Institutions');
+      setDepartment(userObj.department || profObj.department || user?.department || 'Computer Science & Engineering');
+      setYear(userObj.year || userObj.year_of_study || profObj.year || user?.year || '3rd Year');
+      setQualification(userObj.qualification || profObj.qualification || user?.qualification || 'B.E. Computer Science and Engineering');
 
       setCgpa(data.profile.cgpa || '8.0');
       setPreferredDomain(data.profile.preferred_domain || 'Data Science');
@@ -180,7 +199,12 @@ const StudentProfilePage = () => {
         proficiency: s.proficiency || 'Intermediate'
       })).filter(s => s.skill_name.length > 0);
 
-      await studentService.updateProfile({
+      const res = await studentService.updateProfile({
+        name: name.trim(),
+        college: college.trim(),
+        department: department.trim(),
+        year: year.trim(),
+        qualification: qualification.trim(),
         cgpa: parseFloat(cgpa) || 0.0,
         interests: selectedInterests.join(', '),
         preferred_domain: preferredDomain,
@@ -192,7 +216,13 @@ const StudentProfilePage = () => {
         certifications: certifications,
       });
 
-      setSuccessMsg('Profile saved! Skills updated for recommendations.');
+      if (res.data?.user && updateUser) {
+        updateUser(res.data.user);
+      } else if (updateUser) {
+        updateUser({ name, college, department, year, qualification });
+      }
+
+      setSuccessMsg('Profile saved! Academic identity, college details & skills updated.');
       setTimeout(() => setSuccessMsg(''), 6000);
 
       if (runAnalysisAfter) {
@@ -220,15 +250,17 @@ const StudentProfilePage = () => {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span className="badge badge-primary">Student Profile</span>
-              <span className="badge badge-neutral">{user?.department || 'Engineering'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+              <span className="badge badge-primary">{name || user?.name || 'Student'}</span>
+              <span className="badge badge-neutral">{college || user?.college || 'Rathinam Group of Institutions'}</span>
+              <span className="badge badge-secondary">{qualification || user?.qualification || 'B.E. Computer Science'}</span>
+              <span className="badge badge-neutral">{year}</span>
             </div>
             <h1 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-              My Skills & Profile
+              My Profile & Academic Credentials
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
-              Add your skills to get matched with internships and jobs.
+              Manage your personal student details, college enrollment, degree qualification, and technical skills.
             </p>
           </div>
 
@@ -291,6 +323,148 @@ const StudentProfilePage = () => {
             <span>{errorMsg}</span>
           </div>
         )}
+
+        {/* Student Academic Identity & College Details Card */}
+        <div className="card" style={{ marginBottom: '28px', borderTop: '4px solid var(--primary-600)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                backgroundColor: 'var(--primary-50)',
+                color: 'var(--primary-600)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'var(--shadow-xs)'
+              }}>
+                <GraduationCap size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '2px', color: 'var(--text-primary)' }}>
+                  Student Identity & College Details
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+                  Your official student name, college/institution, degree qualification, and department
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <span className="badge badge-primary">{year}</span>
+              <span className="badge badge-neutral">{department}</span>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '20px',
+            backgroundColor: 'var(--bg-secondary)',
+            padding: '22px',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-subtle)'
+          }}>
+            {/* Full Name */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <User size={15} style={{ color: 'var(--primary-600)' }} />
+                <span>Full Name</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Nisha R"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={{ backgroundColor: '#ffffff' }}
+              />
+            </div>
+
+            {/* College / Institution */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <Building2 size={15} style={{ color: 'var(--primary-600)' }} />
+                <span>College / Institution</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Rathinam Technical Campus / Rathinam Group of Institutions"
+                value={college}
+                onChange={(e) => setCollege(e.target.value)}
+                style={{ backgroundColor: '#ffffff' }}
+              />
+            </div>
+
+            {/* Degree & Qualification */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <Award size={15} style={{ color: 'var(--primary-600)' }} />
+                <span>Degree & Qualification</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. B.E. Computer Science and Engineering"
+                value={qualification}
+                onChange={(e) => setQualification(e.target.value)}
+                style={{ backgroundColor: '#ffffff' }}
+              />
+            </div>
+
+            {/* Department / Branch */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <BookOpen size={15} style={{ color: 'var(--primary-600)' }} />
+                <span>Department / Branch</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Computer Science & Engineering"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                style={{ backgroundColor: '#ffffff' }}
+              />
+            </div>
+
+            {/* Year of Study */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <Calendar size={15} style={{ color: 'var(--primary-600)' }} />
+                <span>Year of Study</span>
+              </label>
+              <select
+                className="form-select"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                style={{ backgroundColor: '#ffffff' }}
+              >
+                <option value="1st Year">1st Year (Freshman)</option>
+                <option value="2nd Year">2nd Year (Sophomore)</option>
+                <option value="3rd Year">3rd Year (Junior)</option>
+                <option value="4th Year">4th Year (Final Year / Senior)</option>
+                <option value="Postgraduate">Postgraduate (Masters / MCA / M.Tech)</option>
+              </select>
+            </div>
+
+            {/* Account Email (Read-only) */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                <Mail size={15} style={{ color: 'var(--primary-600)' }} />
+                <span>Registered Email ID</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={user?.email || 'student@careermatch.ai'}
+                disabled
+                style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: 'var(--text-muted)' }}
+              />
+            </div>
+          </div>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '32px' }}>
           {/* LEFT COLUMN: Skills, Projects, Certifications */}

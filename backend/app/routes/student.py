@@ -7,10 +7,17 @@ student_bp = Blueprint("student", __name__)
 @student_bp.route("/profile", methods=["GET"])
 @token_required
 def get_profile():
-    user = request.current_user
-    u_id = user["id"]
+    u_id = request.current_user["id"]
 
-    # 1. Fetch profile
+    # 1. Fetch user record
+    user_row = query_db(
+        "SELECT id, name, email, department, year, college, qualification, role FROM users WHERE id = %s",
+        (u_id,),
+        one=True
+    )
+    user = dict(user_row) if user_row else request.current_user
+
+    # 2. Fetch profile
     profile = query_db(
         "SELECT * FROM student_profiles WHERE user_id = %s",
         (u_id,),
@@ -18,12 +25,12 @@ def get_profile():
     )
     if not profile:
         execute_db(
-            "INSERT INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode) VALUES (%s, 0.00, '', '', '', 'Both', 'Any')",
-            (u_id,)
+            "INSERT INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode, college, qualification) VALUES (%s, 0.00, '', '', '', 'Both', 'Any', %s, %s)",
+            (u_id, user.get("college", ""), user.get("qualification", ""))
         )
-        profile = query_db("SELECT * FROM student_profiles WHERE user_id = %s", (u_id,), one=True)
+        profile = query_db("SELECT * FROM student_profiles WHERE user_id = %s", (u_id,), one=True) or {}
 
-    # 2. Fetch skills
+    # 3. Fetch skills
     skills_rows = query_db(
         "SELECT skill_name, proficiency FROM student_skills WHERE student_id = %s ORDER BY id ASC",
         (u_id,)
@@ -31,21 +38,38 @@ def get_profile():
     skills = [r["skill_name"] for r in skills_rows]
     skills_detailed = skills_rows
 
-    # 3. Fetch projects
+    # 4. Fetch projects
     projects = query_db(
         "SELECT id, project_name, description, technologies FROM projects WHERE student_id = %s ORDER BY id ASC",
         (u_id,)
     )
 
-    # 4. Fetch certifications
+    # 5. Fetch certifications
     certifications = query_db(
         "SELECT id, certification_name, organization FROM certifications WHERE student_id = %s ORDER BY id ASC",
         (u_id,)
     )
 
+    college = user.get("college") or profile.get("college") or "Rathinam Group of Institutions"
+    qualification = user.get("qualification") or profile.get("qualification") or "B.E. Computer Science and Engineering"
+    dept = user.get("department") or "Computer Science & Engineering"
+    year = user.get("year") or "3rd Year"
+
+    user["college"] = college
+    user["qualification"] = qualification
+    user["department"] = dept
+    user["year"] = year
+    user["year_of_study"] = year
+
     return jsonify({
         "user": user,
         "profile": {
+            "name": user.get("name", ""),
+            "email": user.get("email", ""),
+            "college": college,
+            "department": dept,
+            "year": year,
+            "qualification": qualification,
             "cgpa": float(profile.get("cgpa", 0.0) or 0.0),
             "interests": profile.get("interests", "") or "",
             "preferred_domain": profile.get("preferred_domain", "") or "",
@@ -63,17 +87,24 @@ def get_profile():
 @student_bp.route("/profile", methods=["PUT"])
 @token_required
 def update_profile():
-    user = request.current_user
-    u_id = user["id"]
+    u_id = request.current_user["id"]
+    current_email = request.current_user.get("email", "")
     data = request.get_json() or {}
 
-    # Update user basic info (name, department, year)
-    name = data.get("name", user["name"])
-    dept = data.get("department", user.get("department", ""))
-    year = data.get("year", user.get("year", ""))
+    # Update user identity & academic info (name, college, department, year, qualification)
+    name = (data.get("name") or request.current_user.get("name", "")).strip()
+    college = (data.get("college") or request.current_user.get("college", "Rathinam Group of Institutions")).strip()
+    dept = (data.get("department") or request.current_user.get("department", "Computer Science & Engineering")).strip()
+    year = (data.get("year") or request.current_user.get("year", "3rd Year")).strip()
+    qualification = (data.get("qualification") or request.current_user.get("qualification", "B.E. Computer Science and Engineering")).strip()
+
     execute_db(
-        "UPDATE users SET name = %s, department = %s, year = %s WHERE id = %s",
-        (name, dept, year, u_id)
+        "UPDATE users SET name = %s, college = %s, department = %s, year = %s, qualification = %s WHERE id = %s",
+        (name, college, dept, year, qualification, u_id)
+    )
+    execute_db(
+        "UPDATE students SET name = %s, college = %s, department = %s, year = %s, qualification = %s WHERE id = %s OR email = %s",
+        (name, college, dept, year, qualification, u_id, current_email)
     )
 
     # Update student_profiles
@@ -89,19 +120,21 @@ def update_profile():
     with get_db() as db:
         cur = db.cursor()
         cur.execute("""
-            INSERT OR REPLACE INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT OR REPLACE INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode, college, qualification)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """ if db.is_sqlite else """
-            INSERT INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO student_profiles (user_id, cgpa, interests, preferred_domain, preferred_location, opportunity_type, work_mode, college, qualification)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 cgpa = VALUES(cgpa),
                 interests = VALUES(interests),
                 preferred_domain = VALUES(preferred_domain),
                 preferred_location = VALUES(preferred_location),
                 opportunity_type = VALUES(opportunity_type),
-                work_mode = VALUES(work_mode)
-        """, (u_id, cgpa, interests, pref_domain, pref_loc, opp_type, work_mode))
+                work_mode = VALUES(work_mode),
+                college = VALUES(college),
+                qualification = VALUES(qualification)
+        """, (u_id, cgpa, interests, pref_domain, pref_loc, opp_type, work_mode, college, qualification))
 
         # Replace skills
         cur.execute("DELETE FROM student_skills WHERE student_id = %s", (u_id,))
@@ -134,7 +167,7 @@ def update_profile():
         # Replace certifications
         cur.execute("DELETE FROM certifications WHERE student_id = %s", (u_id,))
         for c in data.get("certifications", []):
-            c_name = (c.get("certification_name") or "").strip()
+            c_name = (c.get("certification_name") or c.get("name") or "").strip()
             c_org = (c.get("organization") or "").strip()
             if c_name:
                 cur.execute(
@@ -144,7 +177,18 @@ def update_profile():
 
         db.commit()
 
-    return jsonify({"message": "Student profile updated successfully."}), 200
+    fresh_user = query_db(
+        "SELECT id, name, email, department, year, college, qualification, role FROM users WHERE id = %s",
+        (u_id,),
+        one=True
+    )
+    user_resp = dict(fresh_user) if fresh_user else dict(request.current_user)
+    user_resp["year_of_study"] = user_resp.get("year", "")
+
+    return jsonify({
+        "message": "Student profile updated successfully.",
+        "user": user_resp
+    }), 200
 
 
 @student_bp.route("/skills", methods=["GET"])

@@ -4,7 +4,7 @@ Opportunities CRUD and Search Blueprint
 
 from flask import Blueprint, request, jsonify
 from app.database.connection import query_db, execute_db
-from app.utils.auth import token_required, admin_required
+from app.utils.auth import admin_required
 
 opportunities_bp = Blueprint("opportunities", __name__)
 

@@ -3,6 +3,14 @@ CareerMatch AI - Verification Test Suite
 Tests all endpoints either against a running server or via in-memory Flask test client.
 """
 
+import os
+import sys
+
+# Ensure backend root directory is on sys.path
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 import urllib.request
 import json
 from app import create_app

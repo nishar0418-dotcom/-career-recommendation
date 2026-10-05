@@ -3,7 +3,7 @@ AI Analysis Routes: Profile strength, domain suitability, and AI recommendations
 """
 
 from flask import Blueprint, request, jsonify
-from app.database.connection import query_db, execute_db
+from app.database.connection import query_db
 from app.utils.auth import token_required
 from app.ai.recommendation_engine import parse_skill_list
 from app.ai.career_role_matcher import calculate_domain_scores, match_career_roles

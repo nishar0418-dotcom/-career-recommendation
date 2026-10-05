@@ -10,7 +10,6 @@ import {
   Sparkles, 
   Search, 
   SlidersHorizontal,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
   RotateCcw,

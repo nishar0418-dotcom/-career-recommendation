@@ -8,10 +8,8 @@ import {
   MapPin, 
   DollarSign, 
   Briefcase, 
-  ExternalLink, 
-  SlidersHorizontal,
-  RotateCcw,
-  CheckCircle2,
+  RotateCcw, 
+  CheckCircle2, 
   Send
 } from 'lucide-react';
 

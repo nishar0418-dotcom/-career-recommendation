@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { recommendationService } from '../services/api';
-import { Compass, Sparkles, CheckCircle2, XCircle, BookOpen, Search, ArrowRight } from 'lucide-react';
+import { Sparkles, Search, ArrowRight } from 'lucide-react';
 
 const CareerRolesPage = () => {
   const [loading, setLoading] = useState(true);
